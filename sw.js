@@ -1,11 +1,11 @@
 /* Service worker: gør appen installerbar og brugbar uden net.
    Bump CACHE (og ?v= i index.html), når filer ændres. */
-const CACHE = 'drukspil-v8';
-const V = '?v=8';
+const CACHE = 'drukspil-v9';
+const V = '?v=9';
 const FILES = [
   './', './index.html', './manifest.webmanifest',
   './style.css' + V, './app.js' + V, './spotify.js' + V,
-  './data/imposter-words.js' + V, './data/bombe-categories.js' + V, './data/hitster-songs.js' + V,
+  './data/imposter-words.js' + V, './data/bombe-categories.js' + V, './data/hitster-songs.js' + V, './data/hitster-streams.js' + V,
   './games/imposter.js' + V, './games/bombe.js' + V, './games/hitster.js' + V,
   './fonts/LilitaOne-Regular.woff2', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png'
 ];
