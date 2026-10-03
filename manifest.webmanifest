@@ -1,14 +1,14 @@
 {
   "name": "Drukspil",
   "short_name": "Drukspil",
-  "description": "Gratis drukspil til telefonen: Imposter, Bombe, Jeg har aldrig, Mest sandsynlig og Hvem drikker.",
+  "description": "Gratis drukspil til telefonen: Imposter, Bombe og Hitster.",
   "lang": "da",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0e1020",
-  "theme_color": "#0e1020",
+  "background_color": "#24164f",
+  "theme_color": "#1a1040",
   "icons": [
     { "src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },

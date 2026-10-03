@@ -1,13 +1,13 @@
 /* Service worker: gør appen installerbar og brugbar uden net.
    Bump CACHE (og ?v= i index.html), når filer ændres. */
-const CACHE = 'drukspil-v1';
-const V = '?v=1';
+const CACHE = 'drukspil-v7';
+const V = '?v=7';
 const FILES = [
   './', './index.html', './manifest.webmanifest',
-  './style.css' + V, './app.js' + V,
-  './data/imposter-words.js' + V, './data/bombe-categories.js' + V, './data/decks-data.js' + V,
-  './games/imposter.js' + V, './games/bombe.js' + V, './games/decks.js' + V,
-  './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png'
+  './style.css' + V, './app.js' + V, './spotify.js' + V,
+  './data/imposter-words.js' + V, './data/bombe-categories.js' + V, './data/hitster-songs.js' + V,
+  './games/imposter.js' + V, './games/bombe.js' + V, './games/hitster.js' + V,
+  './fonts/LilitaOne-Regular.woff2', './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png'
 ];
 
 self.addEventListener('install', e => {
@@ -24,6 +24,9 @@ self.addEventListener('activate', e => {
 /* Net først med kort timeout, ellers cache. Nye filer hentes, så snart der er net. */
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET' || !e.request.url.startsWith(self.location.origin)) return;
+  /* Svaret fra Spotify-login (?code=...) skal aldrig gemmes */
+  const q = new URL(e.request.url).searchParams;
+  if (q.has('code') || q.has('error')) return;
   e.respondWith((async () => {
     const cache = await caches.open(CACHE);
     const cached = await cache.match(e.request);

@@ -2,32 +2,42 @@
 (() => {
   const ID = 'bombe';
   const C = '#ff6a2a';
-  const DEF = { mode: 'kategori', min: 10, max: 45, turns: true, accel: true };
+  const DEF = { mode: 'blandet', min: 10, max: 45, turns: true, accel: true };
   const { esc, ui } = App;
   let S = null;
   let B = null;
   const used = new Set();
+  /* Bomben: bruges både som ikon på forsiden og stor på spilleskærmen (gnisten animeres i CSS) */
+  const BOMB = `<svg viewBox="0 0 64 64" aria-hidden="true">
+    <path d="M31 13c1-6 6-8 10-5s6 1 6-2" fill="none" stroke="#0d1b3e" stroke-width="7" stroke-linecap="round"/>
+    <path d="M31 13c1-6 6-8 10-5s6 1 6-2" fill="none" stroke="#e8c79a" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="30" cy="40" r="19" fill="#2f3656" stroke="#0d1b3e" stroke-width="3"/>
+    <ellipse cx="23" cy="33" rx="6" ry="4" fill="#8b93bd" opacity=".9" transform="rotate(-35 23 33)"/>
+    <rect x="24" y="12" width="14" height="11" rx="3" fill="#7c8299" stroke="#0d1b3e" stroke-width="3"/>
+    <path class="spark" d="M47 0l2 4.2 4.6.6-3.4 3.2.9 4.6L47 10.4l-4.1 2.2.9-4.6-3.4-3.2 4.6-.6z" fill="#ffe14d" stroke="#ff8a1f" stroke-width="1.5" stroke-linejoin="round"/>
+  </svg>`;
 
   App.register({
-    id: ID, navn: 'Bombe', farve: C,
-    kort: 'Sig et ord i kategorien, og giv bomben videre. Den, der holder den, når den springer, drikker.',
+    id: ID, navn: 'Bombe', farve: C, ikon: BOMB,
+    kort: 'Kategori eller scenarie: sig noget, der passer, og giv bomben videre. Den, der holder den, når den springer, drikker.',
     onEnter(){ S = App.gameSettings(ID, DEF); B = null; App.keepAwake(); },
     onLeave(){ stop(); },
     render
   });
 
-  function cats(){
-    const a = BOMBE_CATEGORIES.slice();
-    if (App.settings().adult) a.push(...BOMBE_CATEGORIES_ADULT);
+  function pool(mode){
+    const a = mode === 'scenarie' ? BOMBE_SCENARIER.slice() : BOMBE_CATEGORIES.slice();
+    if (App.settings().adult) a.push(...(mode === 'scenarie' ? BOMBE_SCENARIER_ADULT : BOMBE_CATEGORIES_ADULT));
     return a;
   }
+  /* Samme opgave kommer ikke igen, før alle i puljen har været brugt */
   function newPrompt(){
     let mode = S.mode;
-    if (mode === 'blandet') mode = Math.random() < 0.5 ? 'kategori' : 'bogstav';
-    if (mode === 'bogstav') return { mode, text: App.pick(BOMBE_LETTERS) };
-    let pool = cats().filter(c => !used.has(c));
-    if (!pool.length) { used.clear(); pool = cats(); }
-    const c = App.pick(pool); used.add(c);
+    if (mode === 'blandet') mode = Math.random() < 0.5 ? 'kategori' : 'scenarie';
+    const all = pool(mode);
+    let left = all.filter(c => !used.has(c));
+    if (!left.length) { all.forEach(c => used.delete(c)); left = all; }
+    const c = App.pick(left); used.add(c);
     return { mode, text: c };
   }
   function holder(){ return B.turns ? B.players[B.idx % B.players.length] : null; }
@@ -39,15 +49,16 @@
 
   function renderSetup(){
     const p = App.players();
-    const hint = S.mode === 'bogstav' ? 'Sig et ord, der starter med bogstavet.'
-      : S.mode === 'kategori' ? 'Sig noget, der passer til kategorien. Ingen gentagelser.'
-      : 'Skiftevis kategori og bogstav.';
+    if (S.mode === 'bogstav') S.mode = 'blandet';   // gammel indstilling, bogstaver findes ikke længere
+    const hint = S.mode === 'scenarie' ? 'Kom med et svar, der passer til situationen. Jo dummere, jo bedre. Ingen gentagelser.'
+      : S.mode === 'kategori' ? 'Nævn noget, der passer til kategorien. Ingen gentagelser.'
+      : 'Skiftevis kategorier og scenarier.';
     return ui.shell({ title: 'Bombe', color: C, body: `
-      <div class="card"><p>Bomben tikker, men ingen ved hvor længe. Sig et ord, der passer til opgaven, og giv telefonen videre. Den, der holder bomben, når den springer, drikker.</p></div>
+      <div class="card"><p>Bomben tikker, men ingen ved hvor længe. Sig noget, der passer til opgaven, og giv telefonen videre. Den, der holder bomben, når den springer, drikker.</p></div>
       <div class="card">
         <div class="field">
           <div class="label">Opgave</div>
-          ${ui.seg('bomb.seg', [{ v: 'kategori', l: 'Kategori' }, { v: 'bogstav', l: 'Bogstav' }, { v: 'blandet', l: 'Blandet' }], S.mode, 'mode')}
+          ${ui.seg('bomb.seg', [{ v: 'kategori', l: 'Kategori' }, { v: 'scenarie', l: 'Scenarie' }, { v: 'blandet', l: 'Blandet' }], S.mode, 'mode')}
           <p class="hint">${hint}</p>
         </div>
         ${ui.range('Kortest tid', 'bomb.range', S.min, 'min', 5, 90, 'sek')}
@@ -62,11 +73,11 @@
     const pr = B.prompt;
     const who = holder();
     return ui.shell({ title: 'Bombe', color: C, center: true, backAction: 'bomb.setup', body: `
-      <div class="bomb"><i></i></div>
-      <div class="label">${pr.mode === 'bogstav' ? 'Ord der starter med' : 'Kategori'}</div>
-      <div class="${pr.mode === 'bogstav' ? 'huge' : 'big'}">${esc(pr.text)}</div>
-      ${who ? `<p class="muted">Det er <b>${esc(App.gen(who))}</b> tur</p>` : '<p class="muted">Sig et ord, og giv telefonen videre</p>'}
-      <p class="muted small">Ord sagt: ${B.count}</p>`,
+      <div class="bomb">${BOMB}</div>
+      <div class="label">${pr.mode === 'scenarie' ? 'Scenarie' : 'Kategori'}</div>
+      <div class="big ${pr.text.length > 24 ? 'long' : ''}">${esc(pr.text)}</div>
+      ${who ? `<p class="muted">Det er <b>${esc(App.gen(who))}</b> tur</p>` : '<p class="muted">Sig noget, og giv telefonen videre</p>'}
+      <p class="muted small">Svar indtil nu: ${B.count}</p>`,
       footer: `<button class="btn" data-action="bomb.next">Sagt! Giv videre</button><button class="link" data-action="bomb.swap">Ny opgave (bomben tikker videre)</button>` });
   }
 
@@ -77,7 +88,7 @@
       <main class="center">
         <div class="huge word">BOOM</div>
         <div class="big">${who ? esc(who) + ' drikker' : 'Den, der holder bomben, drikker'}</div>
-        <p class="muted">${pr.mode === 'bogstav' ? 'Bogstav' : 'Kategori'}: ${esc(pr.text)}. Ord sagt: ${B.count}.</p>
+        <p class="muted">${pr.mode === 'scenarie' ? 'Scenarie' : 'Kategori'}: ${esc(pr.text)}. Svar: ${B.count}.</p>
       </main>
       <div class="footer">
         <button class="btn light" data-action="bomb.again">Ny runde</button>
@@ -132,7 +143,7 @@
     App.save();
     document.querySelectorAll('input[data-input="bomb.range"]').forEach(inp => {
       const key = inp.dataset.key;
-      if (inp !== el) inp.value = S[key];
+      if (inp !== el) { inp.value = S[key]; App.ui.syncRange(inp); }
       const b = inp.parentElement.querySelector('.range-head b');
       if (b) b.textContent = S[key] + ' sek';
     });

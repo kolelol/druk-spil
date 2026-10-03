@@ -7,10 +7,17 @@
   let S = null;     // gemte indstillinger
   let R = null;     // igangværende runde
   const used = new Set();
+  /* Hætteklædt skikkelse med lysende øjne */
+  const IKON = `<svg viewBox="0 0 64 64" aria-hidden="true">
+    <path d="M32 4C19 4 10 15 10 30c0 9 3 17 7 29h30c4-12 7-20 7-29C54 15 45 4 32 4z" fill="#a057ff" stroke="#0d1b3e" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M32 16c-8 0-14 7-14 16 0 9 6 16 14 16s14-7 14-16c0-9-6-16-14-16z" fill="#1a0c33" stroke="#0d1b3e" stroke-width="2.5"/>
+    <path d="M17 27c1-8 6-14 13-16" fill="none" stroke="#dcbfff" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M22 30l9 3-1 4-8-2z" fill="#ffe14d"/><path d="M42 30l-9 3 1 4 8-2z" fill="#ffe14d"/>
+  </svg>`;
 
   App.register({
-    id: ID, navn: 'Imposter', farve: C,
-    kort: 'Alle får det samme hemmelige ord, undtagen én. Find imposteren, før imposteren finder ordet.',
+    id: ID, navn: 'Imposter', farve: C, ikon: IKON,
+    kort: 'Alle får det samme hemmelige ord, undtagen én. Sig ét ord på skift, og find imposteren, før imposteren finder ordet.',
     onEnter(){ S = App.gameSettings(ID, DEF); R = null; App.keepAwake(); },
     onLeave(){ stopTimer(); },
     render
@@ -72,6 +79,7 @@
       return ui.shell({ title: 'Imposter', color: C, center: true, backAction: 'imp.setup', body: `
         <div class="label">Spiller ${R.idx + 1} af ${R.order.length}</div>
         <p class="muted">Giv telefonen til</p>
+        ${ui.avatar(name, true)}
         <div class="big">${esc(name)}</div>
         <p class="muted">Kun ${esc(name)} må se den næste skærm.</p>`,
         footer: `<button class="btn" data-action="imp.reveal">Vis min rolle</button>` });
