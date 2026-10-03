@@ -120,6 +120,7 @@ const Spotify = (() => {
   const dev = id => id ? '?device_id=' + encodeURIComponent(id) : '';
   const play = (uri, deviceId) => api('PUT', '/me/player/play' + dev(deviceId), { uris: [uri], position_ms: 0 });
   const pause = deviceId => api('PUT', '/me/player/pause' + dev(deviceId));
+  const resume = deviceId => api('PUT', '/me/player/play' + dev(deviceId));   // uden nummer: fortsætter, hvor pausen var
 
   /* ---------- find nummeret på Spotify ---------- */
   const norm = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -182,5 +183,5 @@ const Spotify = (() => {
     return (e && e.message) || 'Noget gik galt med Spotify.';
   }
 
-  return { SpotifyError, blocked, redirectUri, login, hasCallback, callback, loggedIn, logout, devices, play, pause, findTrack, explain };
+  return { SpotifyError, blocked, redirectUri, login, hasCallback, callback, loggedIn, logout, devices, play, pause, resume, findTrack, explain };
 })();

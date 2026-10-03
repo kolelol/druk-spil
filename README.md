@@ -11,7 +11,7 @@ Ren HTML/CSS/JS uden build-trin. Virker som installeret app (PWA) og uden net, n
 | **Imposter** | Alle får det samme hemmelige ord, undtagen imposteren. Telefonen går på omgang, alle ser deres rolle, I siger ét ord på skift, stemmer og afslører. Varianter: *Klassisk* (imposteren ved det, og kender ikke ordet) og *Undercover* (ingen får det at vide, imposteren får bare et lignende ord). 1 eller flere impostere, valgfri snakketid, kategorier kan slås til og fra. |
 | **Bombe** | Telefonen tikker i et hemmeligt antal sekunder. Sig noget, der passer til opgaven, og giv den videre. To slags opgaver: *Kategori* ("Premier League-klubber", "Ting man mister i byen") og *Scenarie* ("Ting man siger til dørmanden, der ikke vil lukke dig ind", "Undskyldninger for at skippe træning"), eller blandet. Den, der holder bomben, når den springer, drikker. Kan holde styr på, hvem der har bomben, hvis I har skrevet spillere ind. |
 
-| **Hitster** | Et nummer spiller over Spotify. Gæt, hvornår det udkom, og sæt det på rette plads i din tidslinje. Rigtigt: du beholder kortet. Forkert: du drikker (valgfrit antal slurke), og kortet er væk. Første spiller til målet (3 til 15 kort) vinder, og de andre drikker. Valgfri bonus for at kunne kunstner og titel. Kan begrænses til numre fra 1980, 1990 eller 2000 og frem, og dansk musik kan slås til og fra. Kræver Spotify Premium hos den ene, der styrer telefonen (se nedenfor). |
+| **Hitster** | Numre spiller over Spotify, og I gætter dem. Tre spiltyper: *Klassisk* (sæt nummeret på rette plads i din tidslinje af årstal. Rigtigt: du beholder kortet. Forkert: du drikker, og kortet er væk. Først til målet vinder. Valgfri tid til at placere og bonus for kunstner og titel), *Kasser* (én gætter titel, kunstner og årstal, mens den næste spiller holder telefonen, ser svarene og sætter kryds. Hvert kryds er et point. Valgfri tid til at gætte) og *Klip* (hør 1, 5, 15 og 30 sekunder. Den, der gætter sangen først, får 4, 3, 2 eller 1 point). I Kasser og Klip drikker den med færrest point til sidst. Kan begrænses til numre fra 1980, 1990 eller 2000 og frem, og dansk musik kan slås til og fra. Kræver Spotify Premium hos den ene, der styrer telefonen (se nedenfor). |
 
 "Frækt indhold" på forsiden slår voksenkategorier til i alle spil.
 
@@ -28,6 +28,8 @@ Appen afspiller ikke musik selv. Den styrer Spotify på en af jeres enheder (tel
 **Hver gang:** åbn Spotify-appen og spil et nummer i et par sekunder, så enheden er vågen. Åbn Hitster, tryk "Log ind med Spotify" første gang, vælg enhed under "Find enheder" og tryk "Test lyden".
 
 Er Drukspil installeret som app på hjemmeskærmen og login ikke virker, så log ind fra browseren og brug Hitster derfra.
+
+**Klip og forsinkelse:** Spotify er et øjeblik om at starte og stoppe, så et klip på 1 sekund kan lyde kortere eller længere. Under spiltypen Klip kan du trykke "Test 1 sek klip" og rette med "Justér klip (ms)", til det passer på jeres enhed.
 
 ## Kør den
 
