@@ -7,7 +7,7 @@
 (() => {
   const ID = 'hitster';
   const C = '#16c46b';
-  const DEF = { mode: 'klassisk', goal: 8, from: 0, dk: true, sips: 2, bonus: true, timer: 0, rounds: 3, ktimer: 0, songs: 10, lag: 0, hrounds: 5, device: null };
+  const DEF = { mode: 'klassisk', goal: 8, from: 0, musik: 'alle', sips: 2, bonus: true, timer: 0, rounds: 3, ktimer: 0, songs: 10, lag: 0, hrounds: 5, device: null };
   const RUN_KEY = 'drukspil.hitster.run';
   const BONUS = 2;      // slurke at dele ud for at kunne kunstner og titel (klassisk)
   const END_SIPS = 3;   // slurke: de andre drikker ved sejr i klassisk, taberen i kasser, klip og streams
@@ -56,6 +56,7 @@
     kort: 'Fire musikspil over Spotify: tidslinje, kasser, klip og højere eller lavere på streams. Kræver Spotify Premium på den ene telefon.',
     onEnter(){
       S = App.gameSettings(ID, DEF); H = null; SAVED = loadRun(); UI.msg = ''; UI.busy = '';
+      if ('dk' in S) { if (S.dk === false) S.musik = 'int'; delete S.dk; App.save(); }   // gammel indstilling "Med dansk musik"
       App.keepAwake();
       if (Spotify.loggedIn() && !Spotify.blocked()) refreshDevices(true);
     },
@@ -71,8 +72,7 @@
   const nextName = () => H.players[(H.idx + 1) % H.players.length];
   const dev = () => S.device && S.device.id;
   function pool(){
-    let a = HITSTER_SONGS;
-    if (S.dk) a = a.concat(HITSTER_SONGS_DK);
+    const a = S.musik === 'dk' ? HITSTER_SONGS_DK : S.musik === 'int' ? HITSTER_SONGS : HITSTER_SONGS.concat(HITSTER_SONGS_DK);
     return a.filter(s => s[2] >= S.from).map(s => ({ t: s[0], a: s[1], y: s[2] }));
   }
   /* Streams: kun numre, vi har et tal på (data/hitster-streams.js). s er millioner streams. */
@@ -283,9 +283,12 @@
   function renderSetup(){
     const p = App.players();
     const n = p.length;
-    const ready = S.mode === 'streams'
-      ? n >= 2 && spool().length >= n + 10
-      : n >= 2 && Spotify.loggedIn() && !!S.device && pool().length >= n + 10;
+    const src = S.mode === 'streams' ? spool() : pool();
+    const enough = src.length >= n + 10;
+    const ready = n >= 2 && enough && (S.mode === 'streams' || (Spotify.loggedIn() && !!S.device));
+    const few = enough ? '' : `<p class="warn">${S.mode === 'streams'
+      ? 'Der er kun streams-tal for ' + src.length + ' af de valgte numre. Vælg mere musik eller en anden spiltype.'
+      : 'For få numre med de valg. Vælg mere musik eller flere år.'}</p>`;
     const resume = SAVED ? `<div class="card"><div class="label">Spil i gang</div>
         <p>${esc(resumeText(SAVED))}</p>
         <button class="btn light" style="margin-top:10px" data-action="hit.resume">Fortsæt spillet</button></div>` : '';
@@ -327,8 +330,13 @@
           <div class="label">Numre fra</div>
           ${ui.seg('hit.seg', [{ v: 0, l: 'Alle år' }, { v: 1980, l: '1980+' }, { v: 1990, l: '1990+' }, { v: 2000, l: '2000+' }], S.from, 'from')}
         </div>
-        ${ui.toggle('Med dansk musik', 'hit.toggle', S.dk, 'dk')}
-        ${S.mode === 'streams' ? `<p class="hint">${spool().length} numre med tal fra kworb.net, hentet ${streamsDate()}. Tallene stiger hele tiden, så de er cirka.</p>` : ''}
+        <div class="field">
+          <div class="label">Musik</div>
+          ${ui.seg('hit.seg', [{ v: 'alle', l: 'Alt' }, { v: 'dk', l: 'Kun dansk' }, { v: 'int', l: 'Uden dansk' }], S.musik, 'musik')}
+          <p class="hint">${src.length} numre med de valg.</p>
+          ${few}
+        </div>
+        ${S.mode === 'streams' ? `<p class="hint">Streams-tal fra kworb.net, hentet ${streamsDate()}. De stiger hele tiden, så de er cirka. Dansk musik har kun få tal.</p>` : ''}
       </div>`,
       footer: `<button class="btn" data-action="hit.start" ${ready ? '' : 'disabled'}>Start spillet</button>` });
   }
@@ -648,7 +656,7 @@
     S[k] = Math.min(lim[1], Math.max(lim[0], S[k] + d * lim[2]));
     App.save(); App.render();
   });
-  App.on('hit.seg', el => { const k = el.dataset.key; S[k] = k === 'mode' ? el.dataset.v : Number(el.dataset.v); App.save(); App.render(); });
+  App.on('hit.seg', el => { const k = el.dataset.key; S[k] = k === 'mode' || k === 'musik' ? el.dataset.v : Number(el.dataset.v); App.save(); App.render(); });
   App.on('hit.toggle', el => { S[el.dataset.key] = el.checked; App.save(); App.render(); });
 
   App.on('hit.start', start);

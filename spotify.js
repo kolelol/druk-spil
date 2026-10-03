@@ -123,7 +123,8 @@ const Spotify = (() => {
   const resume = deviceId => api('PUT', '/me/player/play' + dev(deviceId));   // uden nummer: fortsætter, hvor pausen var
 
   /* ---------- find nummeret på Spotify ---------- */
-  const norm = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  /* æ og ø har ingen accent at fjerne, så de oversættes, ellers bliver "Øde ø" til "de" */
+  const norm = s => String(s).toLowerCase().replace(/ø/g, 'o').replace(/æ/g, 'ae').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
   const has = (hay, needle) => (' ' + norm(hay) + ' ').includes(' ' + norm(needle) + ' ');
   const BAD = /\b(live|remix|karaoke|instrumental|acoustic|tribute|cover|version|edit|sped up|slowed|nightcore)\b/i;
   const tracks = get(TRACK_KEY) || {};

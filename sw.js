@@ -1,7 +1,7 @@
 /* Service worker: gør appen installerbar og brugbar uden net.
    Bump CACHE (og ?v= i index.html), når filer ændres. */
-const CACHE = 'drukspil-v9';
-const V = '?v=9';
+const CACHE = 'drukspil-v10';
+const V = '?v=10';
 const FILES = [
   './', './index.html', './manifest.webmanifest',
   './style.css' + V, './app.js' + V, './spotify.js' + V,

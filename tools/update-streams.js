@@ -11,7 +11,7 @@ const ROOT = path.join(__dirname, '..');
 const URL = 'https://kworb.net/spotify/songs.html';
 const OUT = path.join(ROOT, 'data', 'hitster-streams.js');
 
-const norm = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/&amp;/g, '&').replace(/[^a-z0-9]+/g, ' ').trim();
+const norm = s => String(s).toLowerCase().replace(/ø/g, 'o').replace(/æ/g, 'ae').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/&amp;/g, '&').replace(/[^a-z0-9]+/g, ' ').trim();
 const has = (hay, needle) => (' ' + norm(hay) + ' ').includes(' ' + norm(needle) + ' ');
 /* "Titel (feat. X) - Remastered 2011" -> "Titel" */
 const base = t => t.replace(/\s*[\(\[].*$/, '').replace(/\s+-\s.*$/, '').trim() || t;
