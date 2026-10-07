@@ -8,10 +8,12 @@ Ren HTML/CSS/JS uden build-trin. Virker som installeret app (PWA) og uden net, n
 
 | Spil | Kort fortalt |
 | --- | --- |
-| **Imposter** | Alle får det samme hemmelige ord, undtagen imposteren. Telefonen går på omgang, alle ser deres rolle, I siger ét ord på skift, stemmer og afslører. Varianter: *Klassisk* (imposteren ved det, og kender ikke ordet) og *Undercover* (ingen får det at vide, imposteren får bare et lignende ord). 1 eller flere impostere, valgfri snakketid, kategorier kan slås til og fra. |
-| **Bombe** | Telefonen tikker i et hemmeligt antal sekunder. Sig noget, der passer til opgaven, og giv den videre. To slags opgaver: *Kategori* ("Premier League-klubber", "Ting man mister i byen") og *Scenarie* ("Ting man siger til dørmanden, der ikke vil lukke dig ind", "Undskyldninger for at skippe træning"), eller blandet. Den, der holder bomben, når den springer, drikker. Kan holde styr på, hvem der har bomben, hvis I har skrevet spillere ind. |
+| **Imposter** | Den rene udgave, alle kender: alle får det samme hemmelige ord, imposteren får intet. Telefonen går på omgang, I siger ét ord på skift, stemmer én gang og afslører. Bliver imposteren taget, får imposteren ét gæt på ordet. Ingen indstillinger. |
+| **Bombe** | Telefonen tikker i et hemmeligt antal sekunder. Nævn noget i kategorien ("Shots", "Ting man mister i byen", "Fodboldspillere man hader"), og giv den videre. Bomben ryster mere og skærmen gløder rødere, jo længere lunten brænder, og så springer den. Den, der holder bomben, når den springer, drikker. Kan holde styr på, hvem der har bomben, hvis I har skrevet spillere ind. |
 
 | **Hitster** | Numre spiller over Spotify, og I gætter dem. Fire spiltyper: *Streams* (højere eller lavere: har den nye sang flere eller færre streams på Spotify end den forrige? Rigtigt giver et point, forkert koster slurke. Sværheden kan sættes til Let, Mellem eller Svær, hvor sangenes tal ligger tættere og tættere, og der kan sættes 5 eller 10 sekunder til at svare. Virker også uden Spotify, bare uden musik), *Klassisk* (sæt nummeret på rette plads i din tidslinje af årstal. Rigtigt: du beholder kortet. Forkert: du drikker, og kortet er væk. Først til målet vinder. Valgfri tid til at placere og bonus for kunstner og titel), *Kasser* (én gætter titel, kunstner og årstal, mens den næste spiller holder telefonen, ser svarene og sætter kryds. Hvert kryds er et point. Valgfri tid til at gætte) og *Klip* (hør 1, 5, 15 og 30 sekunder. Den, der gætter sangen først, får 4, 3, 2 eller 1 point). I Kasser, Klip og Streams drikker den med færrest point til sidst. Kan begrænses til numre fra 1980, 1990 eller 2000 og frem, og musikken vælges som "Alt", "Kun dansk" eller "Uden dansk" (366 internationale og 562 danske numre, fra Gasolin' og Bamses Venner til Gilli og D1MA). Streams har tal for 364 internationale og 290 danske numre og kan også spilles som Kun dansk. Kræver Spotify Premium hos den ene, der styrer telefonen (se nedenfor). |
+
+| **Spygame** | Alle får det samme ord i en kategori, spionen får kun kategorien. Stil ét spørgsmål til hinanden på skift, svar uden at sige ordet, og stem på, hvem spionen er. Spionen kan se alle ordene i kategorien. 1 eller flere spioner, 1 til 3 spørgerunder. |
 
 "Frækt indhold" på forsiden slår voksenkategorier til i alle spil.
 
@@ -55,9 +57,11 @@ app.js                     kerne: navigation, spillere, indstillinger, lyd (Web 
 spotify.js                 Spotify-klient til Hitster: login (PKCE), enheder, afspil/pause, find nummer
 games/imposter.js          Imposter
 games/bombe.js             Bombe
+games/spygame.js           Spygame
 games/hitster.js           Hitster
 data/imposter-words.js     ordpar pr. kategori: [ord, lignende ord]
-data/bombe-categories.js   kategorier og scenarier
+data/bombe-categories.js   kategorier
+data/spygame-words.js      ord pr. kategori til Spygame
 data/hitster-songs.js      numre: ['Titel', 'Kunstner', år], dansk musik i en separat liste
 data/hitster-streams.js    antal streams i millioner pr. nummer (laves af tools/update-streams.js)
 tools/update-streams.js    henter friske tal fra kworb.net: node tools/update-streams.js
@@ -70,7 +74,8 @@ Hvert spil registrerer sig med `App.register({ id, navn, kort, farve, ikon, rend
 ## Tilføj indhold
 
 - **Nye Imposter-ord:** tilføj `['Ord', 'Lignende ord']` i den rigtige kategori i `data/imposter-words.js`. Ny kategori: nyt objekt med `id`, `navn`, `ord` (og `adult: true` hvis den kun skal vises med frækt indhold slået til).
-- **Nye Bombe-opgaver:** kategorier i `BOMBE_CATEGORIES`, scenarier i `BOMBE_SCENARIER` (og `*_ADULT`-listerne til frækt indhold) i `data/bombe-categories.js`.
+- **Nye Bombe-kategorier:** `BOMBE_CATEGORIES` (og `BOMBE_CATEGORIES_ADULT` til frækt indhold) i `data/bombe-categories.js`. En kategori skal have 20+ svar, man kan finde på under pres, og den skal have kant: skolebogs-kategorier er fjernet med vilje.
+- **Nye Spygame-ord:** i den rigtige kategori i `data/spygame-words.js`. Kategorien alene må ikke hjælpe spionen, så hold kategorierne brede.
 - **Nye Hitster-numre:** tilføj `['Titel', 'Kunstner', år]` i `data/hitster-songs.js` (`HITSTER_SONGS_DK` til dansk). Året er det år, nummeret først udkom. Slå det op, og stol ikke på én kilde: streamingtjenester viser ofte genudgivelsens år. Den danske liste er lavet ved kun at tage numre, hvor to kilder (MusicBrainz, Deezer, iTunes) var enige. Stav titel og kunstner som på Spotify, for appen finder nummeret ved at søge på dem. Numre, Spotify ikke har, springes over under spillet; se konsollen for "ingen match".
 - **Streams-tal:** Spotify udleverer ikke antal streams, så tallene er et øjebliksbillede fra kworb.net: først den globale topliste, derefter kunstnerens egen side for resten. Kør `node tools/update-streams.js` (et par minutter) for at hente friske tal, også efter du har tilføjet nye numre. Kunstnere, kworb ikke har en side for, får ingen tal og er ikke med i spiltypen Streams. Kunstnernes Spotify-ID gemmes i `tools/artist-ids.json`.
 

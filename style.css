@@ -200,6 +200,7 @@ input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 
 .reveal-box, .deck-card { position: relative; width: 100%; margin-top: 16px; padding: 34px 22px 28px; border-radius: 22px; border: 3px solid var(--ink); background: linear-gradient(#fffaf0, #f4e4c1); color: var(--cream-ink); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; box-shadow: inset 0 0 0 6px var(--accent), inset 0 0 0 8px rgba(13, 27, 62, .5), 0 6px 0 var(--ink), 0 16px 26px rgba(0, 0, 0, .4); }
 .deck-card { min-height: 46dvh; margin-bottom: 24px; box-shadow: inset 0 0 0 6px var(--accent), inset 0 0 0 8px rgba(13, 27, 62, .5), 0 6px 0 var(--ink), 0 12px 0 -3px #ead7ab, 0 15px 0 -3px var(--ink), 0 21px 0 -8px #dcc596, 0 24px 0 -8px var(--ink), 0 26px 26px rgba(0, 0, 0, .4); }
 .reveal-box .label, .deck-card .label { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); max-width: 92%; padding: 7px 14px 6px; border-radius: 9px; border: 2px solid var(--ink); background: linear-gradient(color-mix(in srgb, var(--accent), #fff 25%), var(--accent)); color: #fff; font-size: 12.5px; letter-spacing: .08em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: inset 0 2px 0 rgba(255, 255, 255, .4), 0 3px 0 var(--ink); }
+.reveal-box.same { min-height: 250px; }   /* rollekort: samme højde, uanset tekst, så ingen kan se forskel på afstand */
 .reveal-box .big, .deck-card .big { color: var(--cream-ink); text-shadow: 0 1px 0 #fff; }
 .deck-card .big { font-size: clamp(28px, 8vw, 44px); line-height: 1.12; }
 .reveal-box .big.accent { color: var(--accent); }
@@ -207,23 +208,65 @@ input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 
 .reveal-box .muted b { color: var(--cream-ink); }
 .counter { color: var(--muted); font: 400 15px/1 var(--display); letter-spacing: .5px; text-shadow: var(--o-xs); }
 
-/* Bombe */
-.bomb { width: 150px; height: 150px; margin: 6px auto 0; flex: none; filter: drop-shadow(0 8px 10px rgba(0, 0, 0, .45)); }
+/* Bombe: bomben svajer, hopper ved hvert tik, ryger fra lunten, og skærmen gløder rødt, jo længere lunten er brændt (heat1-3) */
+.bomb-stage { --sway: 1.8s; --amp: 2.5deg; position: relative; width: 170px; height: 170px; margin: 2px auto 0; flex: none; animation: sway var(--sway) ease-in-out infinite alternate; transform-origin: 50% 85%; }
+#app.anim .bomb-stage { animation: pop .42s cubic-bezier(.2, 1.4, .4, 1) both, sway var(--sway) ease-in-out .45s infinite alternate; }
+.bomb { width: 100%; height: 100%; filter: drop-shadow(0 8px 10px rgba(0, 0, 0, .45)); }
 .bomb svg { width: 100%; height: 100%; display: block; overflow: visible; }
 .bomb .spark { transform-box: fill-box; transform-origin: 50% 50%; animation: spark .28s infinite alternate; }
+.bomb.tick { animation: bombTick .2s; }
+.smoke { position: absolute; left: 70%; top: 0; width: 1px; height: 1px; pointer-events: none; }
+.smoke i { position: absolute; left: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; background: rgba(255, 255, 255, .5); filter: blur(2px); opacity: 0; animation: puff 1.8s ease-out infinite; }
+.smoke i:nth-child(2) { animation-delay: .45s; left: -4px; }
+.smoke i:nth-child(3) { animation-delay: .9s; left: -12px; }
+.smoke i:nth-child(4) { animation-delay: 1.35s; }
+.heat1 .bomb-stage { --sway: 1.1s; --amp: 4deg; }
+.heat2 .bomb-stage { --sway: .6s; --amp: 6deg; }
+.heat3 .bomb-stage { --sway: .3s; --amp: 9deg; }
+.heat2 .bomb .spark, .heat3 .bomb .spark { animation-duration: .12s; }
+.heat3 .smoke i { animation-duration: .9s; background: rgba(255, 200, 120, .7); }
+.screen.armed > * { position: relative; z-index: 1; }
+.screen.armed::after { content: ""; position: fixed; inset: 0; z-index: 0; pointer-events: none; background: radial-gradient(120% 90% at 50% 60%, transparent 35%, rgba(255, 60, 20, .75)); opacity: 0; transition: opacity .5s; }
+.screen.armed.heat1::after { opacity: .22; }
+.screen.armed.heat2::after { opacity: .5; }
+.screen.armed.heat3::after { opacity: .85; animation: throb .3s ease-in-out infinite alternate; }
+@keyframes sway { from { transform: rotate(calc(-1 * var(--amp))); } to { transform: rotate(var(--amp)); } }
 @keyframes spark { from { transform: scale(.75) rotate(-10deg); opacity: .85; } to { transform: scale(1.25) rotate(12deg); opacity: 1; } }
-.bomb.tick { animation: bombTick .18s; }
-@keyframes bombTick { 0% { transform: scale(1); } 40% { transform: scale(1.08) rotate(-2deg); } 100% { transform: scale(1); } }
-.screen.boom { --ink: #5a0d08; position: relative; overflow: hidden; background: radial-gradient(circle at 50% 38%, #ffd15c, #ff7a2a 42%, #c0261a 100%); color: #fff; animation: boomIn .3s; }
+@keyframes bombTick { 0% { transform: scale(1); } 40% { transform: scale(1.1) translateY(-4px); } 100% { transform: scale(1); } }
+@keyframes puff { 0% { transform: translate(0, 0) scale(.4); opacity: .7; } 100% { transform: translate(-14px, -70px) scale(2.2); opacity: 0; } }
+@keyframes throb { from { opacity: .55; } to { opacity: .95; } }
+
+/* Eksplosionen: hvidt glimt, trykbølge, stumper, gløder, BOOM der slår ind, og rystelser */
+.screen.boom { --ink: #5a0d08; position: relative; overflow: hidden; background: radial-gradient(circle at 50% 38%, #ffd15c, #ff7a2a 42%, #c0261a 100%); color: #fff; animation: boomIn .3s, quake .7s .05s; }
 .screen.boom::before { content: ""; position: absolute; left: 50%; top: 38%; width: 220vmax; height: 220vmax; transform: translate(-50%, -50%); background: repeating-conic-gradient(rgba(255, 255, 255, .16) 0 9deg, transparent 9deg 18deg); animation: rays 30s linear infinite; pointer-events: none; }
 .screen.boom > * { position: relative; }
-.screen.boom .huge { color: #ffe14d; animation: shake .5s; }
-.screen.boom .footer { background: none; }
-.screen.boom .muted { color: #fff; font-weight: 700; text-shadow: 0 2px 0 rgba(90, 13, 8, .75); }
+.screen.boom .flash { position: fixed; inset: 0; z-index: 8; background: #fff; pointer-events: none; animation: flash .7s ease-out forwards; }
+.screen.boom .wave { position: fixed; left: 50%; top: 40%; z-index: 7; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 50%; border: 8px solid rgba(255, 255, 255, .9); pointer-events: none; animation: wave .9s cubic-bezier(.1, .7, .3, 1) forwards; }
+.screen.boom .wave.w2 { border-color: rgba(255, 220, 120, .8); animation-delay: .12s; animation-duration: 1.1s; }
+.screen.boom .shards i { position: fixed; left: 50%; top: 40%; z-index: 6; width: 24px; height: 24px; margin: -12px 0 0 -12px; background: linear-gradient(#4a5280, #2f3656); border: 3px solid #0d1b3e; border-radius: 30% 70% 55% 45% / 45% 35% 65% 55%; pointer-events: none; animation: fly 1.2s cubic-bezier(.1, .8, .3, 1) var(--t) both; }
+.screen.boom .shards i:nth-child(3n) { background: linear-gradient(#a0a7c6, #7c8299); width: 16px; height: 16px; }
+.screen.boom .embers i { position: fixed; left: 50%; top: 40%; z-index: 6; width: 7px; height: 7px; border-radius: 50%; background: #ffe14d; box-shadow: 0 0 10px 3px rgba(255, 140, 30, .85); pointer-events: none; opacity: 0; animation: ember var(--dur) ease-out var(--dl) both; }
+.screen.boom .huge { color: #ffe14d; animation: slam .55s cubic-bezier(.2, 1.5, .4, 1) .1s both, shake .5s .6s; }
+.screen.boom .big { animation: pop .4s cubic-bezier(.2, 1.4, .4, 1) .45s both; }
+.screen.boom .muted { color: #fff; font-weight: 700; text-shadow: 0 2px 0 rgba(90, 13, 8, .75); animation: fadeUp .4s .7s both; }
+.screen.boom .footer { background: none; animation: fadeUp .4s .9s both; }
 .screen.boom .label { color: #fff; }
 @keyframes boomIn { from { transform: scale(1.06); filter: brightness(2); } to { transform: none; filter: none; } }
 @keyframes rays { from { transform: translate(-50%, -50%) rotate(0); } to { transform: translate(-50%, -50%) rotate(360deg); } }
 @keyframes shake { 0%, 100% { transform: none; } 20% { transform: translate(-6px, 2px) rotate(-2deg); } 40% { transform: translate(6px, -2px) rotate(2deg); } 60% { transform: translate(-4px, 1px); } 80% { transform: translate(4px, -1px); } }
+@keyframes quake { 0%, 100% { transform: none; } 10% { transform: translate(-10px, 6px); } 25% { transform: translate(9px, -7px); } 40% { transform: translate(-7px, 4px); } 55% { transform: translate(6px, -3px); } 70% { transform: translate(-4px, 2px); } 85% { transform: translate(2px, -1px); } }
+@keyframes flash { 0% { opacity: 1; } 35% { opacity: .85; background: #ffe9a8; } 100% { opacity: 0; } }
+@keyframes wave { from { transform: scale(.2); opacity: 1; } to { transform: scale(30); opacity: 0; border-width: 1px; } }
+@keyframes fly { from { transform: translate(0, 0) rotate(0) scale(var(--s)); opacity: 1; } 70% { opacity: 1; } to { transform: translate(var(--x), var(--y)) rotate(var(--r)) scale(calc(var(--s) * .5)); opacity: 0; } }
+@keyframes ember { 0% { transform: translate(0, 0); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+@keyframes slam { from { transform: scale(4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes fadeUp { from { transform: translateY(18px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Spygame: ordlisten kan foldes ud på spørgeskærmen */
+.wordlist { width: 100%; margin-top: 4px; }
+.wordlist summary { cursor: pointer; font: 400 15px/1.2 var(--display); letter-spacing: .3px; color: var(--gold); text-shadow: var(--o-xs); padding: 8px 0; }
+.wordlist .chips { justify-content: center; gap: 6px; margin-top: 6px; }
+.wordlist .chip { font-size: 13px; padding: 7px 10px; }
 
 /* Hitster: tidslinje, equalizer og Spotify-opsætning */
 .tl { width: 100%; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; }
@@ -293,7 +336,7 @@ input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 
 @keyframes cardIn { from { transform: translateY(40px) rotate(-4deg) scale(.92); opacity: 0; } to { transform: none; opacity: 1; } }
 
 @media (prefers-reduced-motion: reduce) {
-  .bomb .spark, .bomb.tick, .screen.boom, .screen.boom::before, .screen.boom .huge, .eq i, #app.anim * { animation: none !important; }
+  .bomb-stage, .bomb .spark, .bomb.tick, .smoke i, .screen.armed::after, .screen.boom, .screen.boom::before, .screen.boom *, .eq i, #app.anim * { animation: none !important; }
 }
 @media (min-width: 640px) {
   #app { max-width: 560px; margin: 0 auto; }
