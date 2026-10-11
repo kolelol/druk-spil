@@ -77,12 +77,13 @@
   const PHASES = {
     pass(){
       const name = R.order[R.idx];
+      const first = R.idx === 0;
       return ui.shell({ title: 'Spygame', color: C, center: true, backAction: 'spy.setup', body: `
         <div class="label">Spiller ${R.idx + 1} af ${R.order.length}</div>
-        <p class="muted">Giv telefonen til</p>
-        ${ui.avatar(name, true)}
+        <p class="muted">${first ? 'Telefonen starter hos' : 'Giv telefonen videre til'}</p>
         <div class="big">${esc(name)}</div>
-        <p class="muted">Kun ${esc(name)} må se den næste skærm.</p>`,
+        ${ui.table(R.order, { sm: true, cur: name, done: R.order.slice(0, R.idx), pick: first ? 'spy.from' : '' })}
+        <p class="muted small">${first ? 'Har en anden telefonen? Tryk på dem.' : 'Kun ' + esc(name) + ' må se den næste skærm.'}</p>`,
         footer: `<button class="btn" data-action="spy.reveal">Vis min rolle</button>` });
     },
     reveal(){
@@ -106,8 +107,8 @@
       const lastQ = q.i >= q.list.length - 1;
       return ui.shell({ title: 'Spygame', color: C, center: true, backAction: 'spy.setup', body: `
         <div class="label">${q.title ? q.title + '. ' : ''}Spørgsmål ${q.i + 1} af ${q.list.length}</div>
-        ${ui.avatar(name, true)}
         <div class="big">${esc(name)} spørger</div>
+        ${ui.table(R.order, { sm: true, cur: name, done: R.order.filter(x => !R.alive.has(x)) })}
         <p class="muted">Vælg en, og stil ét spørgsmål om ordet. Den, der svarer, må ikke sige ordet.</p>
         ${wordList()}`,
         footer: lastQ
@@ -151,7 +152,7 @@
     if (!words.length) { cat.ord.forEach(w => used.delete(cat.id + ':' + w)); words = cat.ord; }
     const word = App.pick(words);
     used.add(cat.id + ':' + word);
-    const order = players.slice();
+    const order = App.fromHolder();
     const spies = new Set(App.shuffle(order.slice()).slice(0, Math.min(S.spies, maxSpies(order.length))));
     R = { phase: 'pass', idx: 0, order, round: 1, word, cat: cat.navn, words: cat.ord, spies, alive: new Set(order), q: null, result: null };
     App.render();
@@ -181,8 +182,12 @@
   App.on('spy.start', start);
   App.on('spy.setup', () => { R = null; App.render(); });
   App.on('spy.reveal', () => { R.phase = 'reveal'; App.render(); });
+  App.on('spy.from', el => {
+    if (!R || R.phase !== 'pass' || R.idx !== 0) return;
+    App.setHolder(el.dataset.name); R.order = App.fromHolder(); R.alive = new Set(R.order); App.render();
+  });
   App.on('spy.hide', () => {
-    if (R.idx >= R.order.length - 1) newQuestions(S.rounds, '');
+    if (R.idx >= R.order.length - 1) { App.setHolder(R.order[R.idx]); newQuestions(S.rounds, ''); }
     else { R.idx++; R.phase = 'pass'; }
     App.render();
   });

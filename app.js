@@ -142,6 +142,39 @@ const App = (() => {
     return `<span class="avatar ${xl ? 'xl' : ''}" style="--c:${AVATAR_COLORS[i % AVATAR_COLORS.length]}">${esc(Array.from(name)[0].toUpperCase())}</span>`;
   }
 
+  /* ---------- bordplan ----------
+     Spillerlisten er pladserne rundt om bordet, og telefonen går i den rækkefølge. holderName er den, der har
+     telefonen lige nu (huskes på tværs af runder og spil, ikke gemt): næste runde starter hos dem. */
+  let holderName = null;
+  function holder(){ const p = store.players; return p.includes(holderName) ? holderName : p[0]; }
+  function setHolder(name){ holderName = name; }
+  /* Pladserne i rækkefølge, startende hos den, der har telefonen (eller hos start) */
+  function fromHolder(start){
+    const p = store.players.slice();
+    const i = Math.max(0, p.indexOf(start || holder()));
+    return p.slice(i).concat(p.slice(0, i));
+  }
+  /* Pil i bordets midte: den vej går telefonen */
+  const ARROW = `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M50 36a19 19 0 1 1-6-18" fill="none" stroke="#0d1b3e" stroke-width="11" stroke-linecap="round"/><path d="M50 36a19 19 0 1 1-6-18" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/><path d="M36 10l12 7-10 9z" fill="#fff" stroke="#0d1b3e" stroke-width="3" stroke-linejoin="round"/></svg>`;
+  /* Bordet set oppefra. names er pladserne i rækkefølge, plads 0 nederst, derefter med uret.
+     o: { cur, done: [navne], start, pick: action ved tryk på en plads, empty: antal tomme pladser, sm } */
+  function table(names, o){
+    o = o || {};
+    const done = new Set(o.done || []);
+    const n = names.length + (o.empty || 0);
+    let seats = '';
+    for (let i = 0; i < n; i++) {
+      const a = Math.PI / 2 + i * 2 * Math.PI / n;
+      const pos = `left:${(50 + 41 * Math.cos(a)).toFixed(1)}%;top:${(50 + 39 * Math.sin(a)).toFixed(1)}%`;
+      const name = names[i];
+      if (name === undefined) { seats += `<div class="seat empty" style="${pos}"><span class="avatar"></span><span>?</span></div>`; continue; }
+      const cls = ['seat', name === o.cur ? 'cur' : '', done.has(name) ? 'done' : '', name === o.start ? 'start' : ''].join(' ');
+      const tag = o.pick ? 'button' : 'div';
+      seats += `<${tag} class="${cls}" style="${pos}" ${o.pick ? `data-action="${o.pick}" data-name="${esc(name)}"` : ''}>${avatar(name)}<span>${esc(name)}</span></${tag}>`;
+    }
+    return `<div class="seat-table ${o.sm ? 'sm' : ''}"><div class="table-top">${ARROW}</div>${seats}</div>`;
+  }
+
   /* ---------- UI-byggeklodser ---------- */
   function shell(o){
     return `<div class="screen" style="--accent:${o.color || 'var(--brand)'}">
@@ -197,9 +230,27 @@ const App = (() => {
         <input id="player-input" maxlength="16" placeholder="Skriv et navn" autocomplete="off" autocapitalize="words" enterkeyhint="done">
         <button class="btn sm" type="submit">Tilføj</button>
       </form>
+      ${store.players.length >= 3 ? `<div class="card"><div class="label">Bordplan</div>
+        <p>Telefonen går rundt om bordet i den her rækkefølge. Sid I anderledes, så sæt pladserne.</p>
+        ${table(store.players, { sm: true })}
+        <button class="btn sm ghost" style="align-self:center" data-action="seats.open">Sæt pladser</button></div>` : ''}
       <div class="players">${list || '<p class="muted">Ingen spillere endnu. Imposter kræver mindst 3.</p>'}</div>
       ${store.players.length ? '<button class="link" data-action="players.clear">Fjern alle</button>' : ''}`,
       footer: `<button class="btn" data-action="go" data-to="home">Færdig</button>` });
+  }
+
+  let seatDraft = [], seatBack = 'players';
+  function renderSeats(){
+    const rest = store.players.filter(p => !seatDraft.includes(p));
+    const done = !rest.length;
+    return shell({ title: 'Bordplan', back: seatBack, body: `
+      <p class="hint" style="text-align:center">${seatDraft.length
+        ? (done ? 'Alle sidder. Tjek, at det passer.' : 'Tryk på den, der sidder ved siden af, og fortsæt rundt.')
+        : 'Tryk på navnene i den rækkefølge, I sidder rundt om bordet. Start med den, der har telefonen.'}</p>
+      ${table(seatDraft, { empty: rest.length })}
+      <div class="chips" style="justify-content:center">${rest.map(p => `<button class="chip on" data-action="seats.pick" data-name="${esc(p)}">${esc(p)}</button>`).join('')}</div>
+      ${seatDraft.length ? '<button class="link" data-action="seats.reset">Start forfra</button>' : ''}`,
+      footer: `<button class="btn" data-action="seats.done" ${done ? '' : 'disabled'}>Gem bordplan</button>` });
   }
 
   /* Indgangsanimationer kører kun, når et tryk tegner skærmen igen (ikke ved timer-ticks).
@@ -209,6 +260,7 @@ const App = (() => {
     let html;
     if (screen === 'home') html = renderHome();
     else if (screen === 'players') html = renderPlayers();
+    else if (screen === 'seats') html = renderSeats();
     else { const g = game(screen); html = g ? g.render() : renderHome(); }
     root.innerHTML = html;
     root.classList.toggle('anim', anim === true || pendingAnim);
@@ -228,6 +280,13 @@ const App = (() => {
   });
   on('players.remove', el => { store.players.splice(Number(el.dataset.i), 1); save(); render(); });
   on('players.clear', () => { store.players = []; save(); render(); });
+  on('seats.open', el => { seatBack = el.dataset.back || screen; seatDraft = []; go('seats'); });
+  on('seats.pick', el => { const n = el.dataset.name; if (!seatDraft.includes(n)) seatDraft.push(n); render(); });
+  on('seats.reset', () => { seatDraft = []; render(); });
+  on('seats.done', () => {
+    if (seatDraft.length !== store.players.length) return;
+    store.players = seatDraft.slice(); holderName = seatDraft[0]; save(); go(seatBack);
+  });
 
   /* ---------- events (delegering) ---------- */
   function bind(){
@@ -270,8 +329,9 @@ const App = (() => {
     init, register, on, go, render, save,
     esc, rand, pick, shuffle, gen, gameSettings,
     players: () => store.players,
+    holder, setHolder, fromHolder,
     settings: () => store.settings,
     audio, vibrate, keepAwake, icons,
-    ui: { shell, toggle, seg, stepper, range, syncRange, avatar }
+    ui: { shell, toggle, seg, stepper, range, syncRange, avatar, table }
   };
 })();

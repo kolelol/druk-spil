@@ -330,6 +330,24 @@ input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 
 .how p { font-size: 14px; margin-top: 8px; }
 .uri { margin: 8px 0; padding: 9px 11px; border-radius: 10px; border: 2px solid var(--ink); background: linear-gradient(var(--inset), var(--inset2)); box-shadow: inset 0 3px 5px rgba(0, 0, 0, .5); font: 600 13px/1.4 var(--sans); word-break: break-all; -webkit-user-select: text; user-select: text; }
 
+/* Bordplan: bordet set oppefra med spillerne rundt om, plads 0 nederst og derefter med uret */
+.seat-table { position: relative; width: 100%; max-width: 330px; aspect-ratio: 1.12; margin: 2px auto; flex: none; }
+.seat-table.sm { max-width: 290px; }
+.table-top { position: absolute; inset: 22% 21%; border-radius: 50%; display: grid; place-items: center; border: 3px solid var(--ink); background: radial-gradient(70% 70% at 50% 35%, #d99a5c, #a8662f 70%, #8a5224); box-shadow: inset 0 0 0 6px rgba(90, 45, 15, .55), inset 0 3px 0 rgba(255, 255, 255, .25), 0 5px 0 var(--ink), 0 10px 16px rgba(0, 0, 0, .35); }
+.table-top svg { width: 42%; height: auto; opacity: .7; }
+.seat { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 2px; width: 68px; padding: 0; transition: opacity .2s; }
+.seat .avatar { width: 34px; height: 34px; font-size: 16px; transition: transform .2s; }
+.seat span:last-child { max-width: 68px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 400 12.5px/1.1 var(--display); letter-spacing: .2px; color: #fff; text-shadow: var(--o-xs); }
+.seat.done { opacity: .35; }
+.seat.cur { z-index: 2; }
+.seat.cur span:last-child { margin-top: 6px; }
+.seat.cur .avatar { transform: scale(1.3); box-shadow: 0 0 0 3px var(--gold), 0 0 16px 4px rgba(255, 210, 63, .6); animation: seatPulse 1s ease-in-out infinite alternate; }
+.seat.cur span:last-child, .seat.start span:last-child { color: var(--gold); }
+.seat.empty .avatar { background: rgba(var(--bar), .45); border-style: dashed; border-color: rgba(255, 255, 255, .45); box-shadow: none; }
+.seat.empty span:last-child { color: var(--muted); }
+button.seat:active .avatar { transform: scale(.9); }
+@keyframes seatPulse { from { box-shadow: 0 0 0 3px var(--gold), 0 0 8px 2px rgba(255, 210, 63, .4); } to { box-shadow: 0 0 0 3px var(--gold), 0 0 20px 6px rgba(255, 210, 63, .75); } }
+
 /* Små indgangsanimationer, kun når et tryk skifter skærm */
 #app.anim main.center > .big, #app.anim .huge, #app.anim .avatar.xl { animation: pop .38s cubic-bezier(.2, 1.4, .4, 1) both; }
 #app.anim .reveal-box, #app.anim .deck-card { animation: cardIn .42s cubic-bezier(.2, 1.3, .4, 1) both; }

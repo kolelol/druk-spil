@@ -15,6 +15,8 @@ Ren HTML/CSS/JS uden build-trin. Virker som installeret app (PWA) og uden net, n
 
 | **Spygame** | Alle får det samme ord i en kategori, spionen får kun kategorien. Stil ét spørgsmål til hinanden på skift, svar uden at sige ordet, og stem på, hvem spionen er. Spionen kan se alle ordene i kategorien. 1 eller flere spioner, 1 til 3 spørgerunder. |
 
+**Bordplan:** under Spillere (og i Imposter) kan I sætte pladserne: tryk på navnene i den rækkefølge, I sidder rundt om bordet. Telefonen går så rundt i den rækkefølge i Imposter, Spygame og Hitster, i stedet for hen over bordet. Næste runde starter hos den, der har telefonen, og har en anden den, trykker man bare på dem på bordet.
+
 "Frækt indhold" på forsiden slår voksenkategorier til i alle spil.
 
 ## Hitster og Spotify

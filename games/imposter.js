@@ -39,11 +39,10 @@
     const n = p.length;
     return ui.shell({ title: 'Imposter', color: C, body: `
       <div class="card">
-        <div class="row-between">
-          <div><div class="label">Spillere</div><div class="strong">${n ? esc(p.join(', ')) : 'Ingen endnu'}</div></div>
-          <button class="btn sm ghost" data-action="go" data-to="players">Ret</button>
-        </div>
-        ${n < 3 ? '<p class="warn">Du skal bruge mindst 3 spillere.</p>' : ''}
+        <div class="label">Bordplan</div>
+        ${n >= 3 ? ui.table(p, { sm: true, start: App.holder() }) : '<p class="warn">Du skal bruge mindst 3 spillere.</p>'}
+        <div class="btn-row"><button class="btn sm ghost" data-action="go" data-to="players">Spillere</button>${n >= 3 ? '<button class="btn sm ghost" data-action="seats.open">Sæt pladser</button>' : ''}</div>
+        ${n >= 3 ? `<p class="hint" style="text-align:center">Telefonen går rundt om bordet. ${esc(App.holder())} starter med at se sit ord.</p>` : ''}
       </div>
       <div class="card">
         <div class="label">Sådan spiller I</div>
@@ -56,12 +55,13 @@
   const PHASES = {
     pass(){
       const name = R.order[R.idx];
+      const first = R.idx === 0;
       return ui.shell({ title: 'Imposter', color: C, center: true, backAction: 'imp.setup', body: `
         <div class="label">Spiller ${R.idx + 1} af ${R.order.length}</div>
-        <p class="muted">Giv telefonen til</p>
-        ${ui.avatar(name, true)}
+        <p class="muted">${first ? 'Telefonen starter hos' : 'Giv telefonen videre til'}</p>
         <div class="big">${esc(name)}</div>
-        <p class="muted">Kun ${esc(name)} må se den næste skærm.</p>`,
+        ${ui.table(R.order, { sm: true, cur: name, done: R.order.slice(0, R.idx), pick: first ? 'imp.from' : '' })}
+        <p class="muted small">${first ? 'Har en anden telefonen? Tryk på dem.' : 'Kun ' + esc(name) + ' må se den næste skærm.'}</p>`,
         footer: `<button class="btn" data-action="imp.reveal">Vis mit ord</button>` });
     },
     reveal(){
@@ -79,9 +79,9 @@
     discuss(){
       return ui.shell({ title: 'Imposter', color: C, center: true, backAction: 'imp.setup', body: `
         <div class="label">Alle har set deres ord</div>
-        ${ui.avatar(R.starter, true)}
         <div class="big">${esc(R.starter)} starter</div>
-        <p class="muted">Sig ét ord på skift, der passer til jeres ord. Tag en runde eller to, og stem så.</p>`,
+        ${ui.table(R.order, { sm: true, start: R.starter, cur: R.starter })}
+        <p class="muted">Sig ét ord på skift, samme vej rundt som telefonen gik. Tag en runde eller to, og stem så.</p>`,
         footer: `<button class="btn" data-action="imp.tovote">Gå til afstemning</button>` });
     },
     vote(){
@@ -117,7 +117,7 @@
     if (!left.length) { all.forEach(w => used.delete(w)); left = all; }
     const word = App.pick(left);
     used.add(word);
-    const order = players.slice();
+    const order = App.fromHolder();
     R = { phase: 'pass', idx: 0, order, word, imposter: App.pick(order), starter: App.pick(order), result: null };
     App.render();
   }
@@ -127,8 +127,13 @@
   App.on('imp.start', start);
   App.on('imp.setup', () => { R = null; App.render(); });
   App.on('imp.reveal', () => { R.phase = 'reveal'; App.render(); });
+  /* Første skærm: den, der faktisk har telefonen, trykker på sig selv, og rækkefølgen starter derfra */
+  App.on('imp.from', el => {
+    if (!R || R.phase !== 'pass' || R.idx !== 0) return;
+    App.setHolder(el.dataset.name); R.order = App.fromHolder(); App.render();
+  });
   App.on('imp.hide', () => {
-    if (R.idx >= R.order.length - 1) R.phase = 'discuss';
+    if (R.idx >= R.order.length - 1) { R.phase = 'discuss'; App.setHolder(R.order[R.idx]); }
     else { R.idx++; R.phase = 'pass'; }
     App.render();
   });
