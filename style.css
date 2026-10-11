@@ -250,6 +250,8 @@ input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 
 .screen.boom .big { animation: pop .4s cubic-bezier(.2, 1.4, .4, 1) .45s both; }
 .screen.boom .muted { color: #fff; font-weight: 700; text-shadow: 0 2px 0 rgba(90, 13, 8, .75); animation: fadeUp .4s .7s both; }
 .screen.boom .footer { background: none; animation: fadeUp .4s .9s both; }
+.screen.boom { cursor: pointer; }
+.screen.boom .tap { font: 400 18px/1.2 var(--display); letter-spacing: .3px; color: #fff; text-shadow: var(--o-xs); animation: throb 1s ease-in-out .9s infinite alternate; }
 .screen.boom .label { color: #fff; }
 @keyframes boomIn { from { transform: scale(1.06); filter: brightness(2); } to { transform: none; filter: none; } }
 @keyframes rays { from { transform: translate(-50%, -50%) rotate(0); } to { transform: translate(-50%, -50%) rotate(360deg); } }
