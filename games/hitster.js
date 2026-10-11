@@ -149,6 +149,14 @@
     if (upcoming) Spotify.findTrack(upcoming).catch(() => {});   // klar til næste gang
   }
 
+  /* "Alt": lige mange danske og internationale numre i bunken. Ellers fylder de 562 danske 60 procent, og det var for meget. */
+  function balance(list){
+    if (S.musik !== 'alle') return list;
+    const dk = new Set(HITSTER_SONGS_DK.map(s => s[0] + '|' + s[1]));
+    const d = list.filter(c => dk.has(c.t + '|' + c.a)), i = list.filter(c => !dk.has(c.t + '|' + c.a));
+    return i.concat(App.shuffle(d).slice(0, i.length));
+  }
+
   /* ---------- afspilning ---------- */
   /* Rigtig pause: kun når man forlader Hitster. Inde i spillet bruges hush(), så Spotify-appen ikke falder i søvn. */
   function pauseQuiet(){
@@ -578,7 +586,7 @@
   /* ---------- spil ---------- */
   function start(){
     const p = App.players();
-    const src = S.mode === 'streams' ? spool() : pool();
+    const src = balance(S.mode === 'streams' ? spool() : pool());
     if (p.length < 2 || src.length < p.length + 10) return;
     clearRun(); stopTimers(); hush();
     H = {

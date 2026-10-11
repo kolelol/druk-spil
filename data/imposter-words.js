@@ -2,15 +2,16 @@
    Ordene er de samme slags, som de kendte Imposter-apps bruger (imposter.app, findtheimposter.com,
    impostergamegenerator.fun): konkrete ting, alle kender, og som kan beskrives med ét ord ad gangen.
    Abstrakte ord (SU, kassekredit, friendzone) er fjernet: ejeren og vennerne kaldte dem ubeskriveligt dårlige.
+   Hold det danske nede: ejeren fandt listen "for meget dansk", så kun de allermest kendte danske navne og steder er med.
    Kategorier med adult: true vises kun med "Frækt indhold" slået til. */
 const IMPOSTER_WORDS = [
   { id: 'mad', navn: 'Mad og drikke', ord: [
     'Pizza', 'Burger', 'Is', 'Kaffe', 'Spaghetti', 'Sandwich', 'Chokolade', 'Pandekager', 'Sushi', 'Tacos', 'Popcorn', 'Banan',
     'Appelsinjuice', 'Småkager', 'Pommes frites', 'Æble', 'Pasta', 'Ramen', 'Ost', 'Jordbær', 'Guacamole', 'Croissant', 'Hummus',
     'Falafel', 'Durum', 'Kebab', 'Hotdog', 'Lasagne', 'Nachos', 'Burrito', 'Vaffel', 'Cappuccino', 'Bøf', 'Spareribs', 'Lagkage',
-    'Mælk', 'Spejlæg', 'Rugbrød', 'Flæskesteg', 'Frikadeller', 'Smørrebrød', 'Lakrids', 'Slush ice', 'Red Bull', 'Cola', 'Chips',
-    'Øl', 'Rødvin', 'Vodka', 'Jägerbomb', 'Gin og tonic', 'Mojito', 'Fadøl', 'Vandmelon', 'Avocado', 'Bacon', 'Pølsehorn',
-    'Risalamande', 'Kanelsnegl', 'Toast', 'Müsli', 'Havregrød', 'Suppe', 'Salat', 'Kylling', 'Rejer', 'Laks', 'Tun'
+    'Mælk', 'Spejlæg', 'Rugbrød', 'Flæskesteg', 'Frikadeller', 'Smørrebrød', 'Red Bull', 'Cola', 'Chips',
+    'Øl', 'Rødvin', 'Vodka', 'Jägerbomb', 'Gin og tonic', 'Mojito', 'Fadøl', 'Vandmelon', 'Avocado', 'Bacon',
+    'Toast', 'Müsli', 'Havregrød', 'Suppe', 'Salat', 'Kylling', 'Rejer', 'Laks', 'Tun'
   ]},
   { id: 'dyr', navn: 'Dyr', ord: [
     'Hund', 'Kat', 'Elefant', 'Løve', 'Pingvin', 'Delfin', 'Abe', 'Giraf', 'Kanin', 'Hest', 'Haj', 'Sommerfugl', 'Ugle', 'Bjørn',
@@ -30,17 +31,17 @@ const IMPOSTER_WORDS = [
     'Stranden', 'Lufthavnen', 'Biblioteket', 'Hospitalet', 'Fitnesscentret', 'Museet', 'Kasinoet', 'Akvariet', 'Tivoli', 'Supermarkedet',
     'Bageren', 'Møntvasken', 'Parkeringspladsen', 'Tagterrassen', 'Skolen', 'Kirken', 'Fængslet', 'Stadion', 'Biografen', 'Natklubben',
     'Baren', 'Svømmehallen', 'Zoologisk Have', 'Festivalen', 'Campingpladsen', 'Skiliften', 'Hotellet', 'Hostellet', 'Toget', 'Færgen',
-    'Tankstationen', 'McDonald\'s', 'Ikea', 'Bakken', 'Legoland', 'Roskilde Festival', 'Christiania', 'Jomfru Ane Gade', 'Strøget',
-    'Nørrebro', 'Aarhus', 'København', 'Aalborg', 'Odense', 'Lalandia', 'Sommerhuset', 'Kollegiet', 'Fredagsbaren', 'Tandlægen',
-    'Skadestuen', 'Jobcentret', 'Bodegaen', 'Kebabshoppen', 'Netto', 'Bilka', '7-Eleven', 'Fitness World', 'Rådhuspladsen', 'Dyrehaven'
+    'Tankstationen', 'McDonald\'s', 'Ikea', 'Legoland', 'Roskilde Festival', 'Christiania',
+    'Aarhus', 'København', 'Sommerhuset', 'Tandlægen',
+    'Skadestuen'
   ]},
   { id: 'aktiviteter', navn: 'Aktiviteter', ord: [
     'Camping', 'Yoga', 'Fiskeri', 'Karaoke', 'Bowling', 'Havearbejde', 'Fotografering', 'Skateboarding', 'Surfing', 'Skak', 'Poker',
     'Vandring', 'Dans', 'Madlavning', 'Beerpong', 'Padel', 'Golf', 'Jagt', 'Gaming', 'Shopping', 'Tatovering', 'Paintball', 'Gokart',
     'Bungeejump', 'Faldskærmsudspring', 'Dykning', 'Ridning', 'Spinning', 'Boksetræning', 'Fodboldkamp', 'Koncert', 'Biograftur',
-    'Date', 'Fredagsbar', 'Julefrokost', 'Bytur', 'Forfest', 'Efterfest', 'Drengetur', 'Skiferie', 'Sydtur', 'Grillaften', 'Brætspil',
+    'Date', 'Bytur', 'Forfest', 'Efterfest', 'Drengetur', 'Skiferie', 'Sydtur', 'Grillaften', 'Brætspil',
     'Netflix og chill', 'Løbetur', 'Svømning', 'Sauna', 'Massage', 'Frisøren', 'Bilvask', 'Flyttedag', 'Eksamen', 'Jobsamtale',
-    'Bryllup', 'Fødselsdag', 'Nytårsaften', 'Juleaften', 'Halloween', 'Roskilde', 'Festival', 'Blind date', 'Tinder-date'
+    'Bryllup', 'Fødselsdag', 'Nytårsaften', 'Juleaften', 'Halloween', 'Festival', 'Blind date', 'Tinder-date'
   ]},
   { id: 'jobs', navn: 'Jobs', ord: [
     'Læge', 'Brandmand', 'Kok', 'Pilot', 'Lærer', 'Blikkenslager', 'Astronaut', 'Tryllekunstner', 'Livredder', 'Bartender',
@@ -54,31 +55,31 @@ const IMPOSTER_WORDS = [
     'Fodbold', 'Basketball', 'Tennis', 'Svømning', 'Maraton', 'OL', 'Straffespark', 'Guldmedalje', 'VM', 'Håndbold', 'Badminton',
     'Boksning', 'Brydning', 'Ski', 'Snowboard', 'Golf', 'Bordtennis', 'Baseball', 'Formel 1', 'Tour de France', 'Padel', 'Squash',
     'MMA', 'Darts', 'Billard', 'Bowling', 'E-sport', 'Crossfit', 'Bænkpres', 'Ishockey', 'Rugby', 'Amerikansk fodbold', 'Volleyball',
-    'Beachvolley', 'Champions League', 'Superligaen', 'Premier League', 'Parken', 'Målmand', 'Rødt kort', 'Offside', 'Hjørnespark',
-    'Hattrick', 'Landsholdet', 'Dommeren', 'Ølbong', 'Beerpong', 'Flip cup', 'Armlægning', 'Bordfodbold'
+    'Beachvolley', 'Champions League', 'Premier League', 'Målmand', 'Rødt kort', 'Offside', 'Hjørnespark',
+    'Hattrick', 'Dommeren', 'Ølbong', 'Beerpong', 'Flip cup', 'Armlægning', 'Bordfodbold'
   ]},
   { id: 'film', navn: 'Film og serier', ord: [
     'Star Wars', 'Harry Potter', 'Løvernes Konge', 'Friends', 'The Office', 'Titanic', 'Jurassic Park', 'Batman', 'Frost',
     'Game of Thrones', 'Breaking Bad', 'Stranger Things', 'Spider-Man', 'Find Nemo', 'The Simpsons', 'Avatar', 'Avengers', 'Inception',
     'Interstellar', 'The Godfather', 'Alene hjemme', 'Forrest Gump', 'Toy Story', 'Dødens Gab', 'Gladiator', 'The Matrix',
     'Fast & Furious', 'James Bond', 'Ringenes Herre', 'Shrek', 'Squid Game', 'Peaky Blinders', 'Narcos', 'Prison Break', 'Klovn',
-    'Olsen-banden', 'Far til fire', 'Badehotellet', 'Paradise Hotel', 'Ex on the Beach', 'Robinson', 'Vild med dans', 'X Factor',
-    'Den store bagedyst', 'Top Gun', 'Rocky', 'Terminator', 'Joker', 'Oppenheimer', 'Barbie', 'Minions', 'South Park', 'Family Guy',
-    'Rick and Morty', 'Wednesday', 'The Walking Dead', 'Suits', 'Vikings', 'Bridgerton', 'Emily in Paris', 'Druk'
+    'Paradise Hotel',
+    'Top Gun', 'Rocky', 'Terminator', 'Joker', 'Oppenheimer', 'Barbie', 'Minions', 'South Park', 'Family Guy',
+    'Rick and Morty', 'Wednesday', 'The Walking Dead', 'Suits', 'Vikings', 'Bridgerton', 'Emily in Paris'
   ]},
   { id: 'lande', navn: 'Lande og byer', ord: [
     'Paris', 'New York', 'Tokyo', 'London', 'Italien', 'Australien', 'Brasilien', 'Egypten', 'Hawaii', 'Las Vegas', 'Hollywood',
     'Dubai', 'Rom', 'Berlin', 'Amsterdam', 'Barcelona', 'Mallorca', 'Sunny Beach', 'Prag', 'Budapest', 'Sverige', 'Norge', 'Tyskland',
-    'Spanien', 'Grækenland', 'Tyrkiet', 'Thailand', 'USA', 'Kina', 'Japan', 'Rusland', 'Grønland', 'Island', 'Nordkorea', 'Aalborg',
-    'Aarhus', 'Odense', 'København', 'Esbjerg', 'Randers', 'Herning', 'Bornholm', 'Skagen', 'Malmø', 'Hamborg', 'Flensborg', 'Oslo',
+    'Spanien', 'Grækenland', 'Tyrkiet', 'Thailand', 'USA', 'Kina', 'Japan', 'Rusland', 'Grønland', 'Island', 'Nordkorea',
+    'Aarhus', 'København', 'Bornholm', 'Malmø', 'Hamborg', 'Flensborg', 'Oslo',
     'Stockholm', 'Ibiza', 'Kreta', 'Rhodos', 'Tenerife', 'Marokko', 'Mexico', 'Indien', 'Canada', 'Sydafrika', 'Antarktis', 'Månen'
   ]},
   { id: 'tech', navn: 'Teknologi og internet', ord: [
     'Smartphone', 'Selfie', 'Emoji', 'Adgangskode', 'Wifi', 'Notifikation', 'Screenshot', 'Oplader', 'Flytilstand', 'Videoopkald',
     'Smartwatch', 'Siri', 'ChatGPT', 'Robot', 'Drone', 'Bitcoin', 'iPhone', 'Instagram', 'TikTok', 'Snapchat', 'Netflix', 'Spotify',
-    'YouTube', 'Google', 'Facebook', 'Tinder', 'MobilePay', 'Rejsekort', 'Playstation', 'Xbox', 'Nintendo Switch', 'Minecraft',
-    'Fortnite', 'FIFA', 'GTA', 'Call of Duty', 'Counter-Strike', 'Pokémon', 'Mario', 'Among Us', 'Roblox', 'Candy Crush', 'Wolt',
-    'Just Eat', 'Zalando', 'Amazon', 'Temu', 'Tesla', 'Powerbank', 'AirPods', 'Bluetooth', 'Podcast', 'Meme', 'Gruppechat',
+    'YouTube', 'Google', 'Facebook', 'Tinder', 'MobilePay', 'Playstation', 'Xbox', 'Nintendo Switch', 'Minecraft',
+    'Fortnite', 'FIFA', 'GTA', 'Call of Duty', 'Counter-Strike', 'Pokémon', 'Mario', 'Among Us', 'Roblox', 'Candy Crush',
+    'Zalando', 'Amazon', 'Temu', 'Tesla', 'Powerbank', 'AirPods', 'Bluetooth', 'Podcast', 'Meme', 'Gruppechat',
     'Discord', 'Twitch', 'OnlyFans', 'Reddit', 'Wikipedia', 'E-mail', 'Spam'
   ]},
   { id: 'toej', navn: 'Tøj og mærker', ord: [
@@ -86,24 +87,24 @@ const IMPOSTER_WORDS = [
     'Slips', 'Stiletter', 'Crocs', 'Nike', 'Adidas', 'Gucci', 'Louis Vuitton', 'Zara', 'H&M', 'Rolex', 'Ralph Lauren', 'Moncler',
     'Canada Goose', 'Fodboldtrøje', 'Træningstøj', 'Underbukser', 'Sokker', 'Vinterjakke', 'Regnjakke', 'Hue', 'Vanter', 'Tørklæde',
     'Bælte', 'Ur', 'Ørering', 'Piercing', 'Tatovering', 'Parfume', 'Deodorant', 'Hårvoks', 'Barbermaskine', 'Nøgenbilleder',
-    'McDonald\'s', 'Coca-Cola', 'Pepsi', 'Carlsberg', 'Tuborg', 'Apple', 'Samsung', 'Lego', 'Ikea', 'Jysk', 'Netto', 'Rema 1000',
-    'Føtex', 'Lidl', 'Normal', 'Matas', 'Elgiganten', 'Power', 'Burger King', 'Starbucks', 'Red Bull', 'Monster', 'Marlboro'
+    'McDonald\'s', 'Coca-Cola', 'Pepsi', 'Carlsberg', 'Apple', 'Samsung', 'Lego', 'Ikea',
+    'Burger King', 'Starbucks', 'Red Bull', 'Monster', 'Marlboro'
   ]},
   { id: 'transport', navn: 'Transport', ord: [
     'Fly', 'Metro', 'Taxa', 'Cykel', 'Motorcykel', 'Krydstogtskib', 'Luftballon', 'Helikopter', 'Roadtrip', 'Trafikprop',
     'Tankstation', 'Punktering', 'Elløbehjul', 'Bus', 'Tog', 'Færge', 'Tesla', 'BMW', 'Mercedes', 'Audi', 'Volkswagen', 'Toyota',
     'Porsche', 'Ferrari', 'Lamborghini', 'Traktor', 'Knallert', 'Ambulance', 'Politibil', 'Brandbil', 'Lastbil', 'Autocamper',
-    'Jetski', 'Speedbåd', 'Kajak', 'Rulleskøjter', 'Segway', 'Skib', 'Ubåd', 'Raket', 'Rumskib', 'Storebæltsbroen', 'Øresundsbroen',
-    'Fartkontrol', 'Parkeringsbøde', 'Kørekort', 'Benzin', 'Elbil', 'Natbus', 'S-tog', 'Fartbump', 'Rundkørsel', 'Lyskryds'
+    'Jetski', 'Speedbåd', 'Kajak', 'Rulleskøjter', 'Segway', 'Skib', 'Ubåd', 'Raket', 'Rumskib', 'Storebæltsbroen',
+    'Fartkontrol', 'Parkeringsbøde', 'Kørekort', 'Benzin', 'Elbil', 'Natbus', 'Fartbump', 'Rundkørsel', 'Lyskryds'
   ]},
   { id: 'kendte', navn: 'Kendte', ord: [
-    'Messi', 'Ronaldo', 'Mbappé', 'Neymar', 'Haaland', 'Beckham', 'Zlatan', 'Christian Eriksen', 'Rasmus Højlund', 'Kasper Schmeichel',
-    'Nicklas Bendtner', 'Taylor Swift', 'Beyoncé', 'Drake', 'Ed Sheeran', 'Billie Eilish', 'Justin Bieber', 'Rihanna', 'Kanye West',
+    'Messi', 'Ronaldo', 'Mbappé', 'Neymar', 'Haaland', 'Beckham', 'Zlatan', 'Christian Eriksen',
+    'Taylor Swift', 'Beyoncé', 'Drake', 'Ed Sheeran', 'Billie Eilish', 'Justin Bieber', 'Rihanna', 'Kanye West',
     'Eminem', 'Snoop Dogg', 'MrBeast', 'PewDiePie', 'Elon Musk', 'Donald Trump', 'Putin', 'Kim Kardashian', 'The Rock', 'Tom Cruise',
-    'Leonardo DiCaprio', 'Mads Mikkelsen', 'Nikolaj Coster-Waldau', 'Medina', 'MØ', 'Lukas Graham', 'Gilli', 'Tobias Rahim',
-    'Kong Frederik', 'Dronning Mary', 'Mette Frederiksen', 'Lars Løkke', 'Casper Christensen', 'Frank Hvam', 'Anders Matthesen',
-    'Gulddreng', 'Kesi', 'Blachman', 'Sofie Linde', 'Caroline Wozniacki', 'Viktor Axelsen', 'Jonas Vingegaard', 'Michael Jordan',
-    'LeBron James', 'Mike Tyson', 'Conor McGregor', 'Max Verstappen', 'Kevin Magnussen', 'Lionel Richie', 'Ariana Grande', 'Dua Lipa',
+    'Leonardo DiCaprio', 'Mads Mikkelsen', 'Medina', 'Gilli',
+    'Kong Frederik', 'Mette Frederiksen', 'Casper Christensen',
+    'Jonas Vingegaard', 'Michael Jordan',
+    'LeBron James', 'Mike Tyson', 'Conor McGregor', 'Max Verstappen', 'Lionel Richie', 'Ariana Grande', 'Dua Lipa',
     'The Weeknd', 'Travis Scott', 'Bad Bunny', 'Adele', 'Shakira', 'Jennifer Lopez', 'Brad Pitt', 'Will Smith', 'Keanu Reeves',
     'Ryan Reynolds', 'Margot Robbie', 'Zendaya', 'Harry Styles', 'Olivia Rodrigo', 'Kylie Jenner', 'Jeff Bezos', 'Mark Zuckerberg',
     'Bill Gates', 'Barack Obama', 'Joe Biden', 'Zelenskyj', 'Paven', 'Dalai Lama', 'Greta Thunberg'
@@ -114,7 +115,7 @@ const IMPOSTER_WORDS = [
     'Homer Simpson', 'SvampeBob', 'Peter Plys', 'Harry Potter', 'Hermione', 'Gandalf', 'Gollum', 'Jack Sparrow', 'James Bond', 'Rambo',
     'Terminator', 'Walter White', 'Jon Snow', 'Elsa', 'Simba', 'Nemo', 'Buzz Lightyear', 'Woody', 'Yoda', 'Chewbacca', 'Pingu',
     'Garfield', 'Scooby-Doo', 'Tom og Jerry', 'Bugs Bunny', 'Minions', 'Barbie', 'Ken', 'Godzilla', 'King Kong', 'Dracula',
-    'Frankenstein', 'Zombie', 'Julemanden', 'Tandfeen', 'Påskeharen', 'Rasmus Klump', 'Pippi Langstrømpe', 'Emil fra Lønneberg',
+    'Frankenstein', 'Zombie', 'Julemanden', 'Tandfeen', 'Påskeharen', 'Pippi Langstrømpe', 'Emil fra Lønneberg',
     'Ronja Røverdatter', 'Asterix', 'Tintin', 'Lucky Luke', 'Super Mario', 'Lara Croft', 'Master Chief', 'Kratos', 'Steve', 'Creeper'
   ]},
   { id: 'fraekt', navn: 'Frækt', adult: true, ord: [

@@ -28,17 +28,23 @@
     render
   });
 
-  function pool(){
-    const a = BOMBE_CATEGORIES.slice();
-    if (App.settings().adult) a.push(...BOMBE_CATEGORIES_ADULT);
-    return a;
+  function themes(){
+    const t = BOMBE_CATEGORIES.map(g => ({ tema: g.tema, ord: g.ord }));
+    if (App.settings().adult) t.push({ tema: 'Frækt', ord: BOMBE_CATEGORIES_ADULT });
+    return t;
   }
-  /* Samme kategori kommer ikke igen, før alle i puljen har været brugt */
+  let lastTema = null;
+  /* Temaet skifter hver gang, så to kategorier i træk ikke ligner hinanden (ejeren fandt rækkefølgen kedelig),
+     og samme kategori kommer ikke igen, før alle er brugt. */
   function newPrompt(){
-    const all = pool();
-    let left = all.filter(c => !used.has(c));
-    if (!left.length) { all.forEach(c => used.delete(c)); left = all; }
-    const c = App.pick(left); used.add(c);
+    const all = themes();
+    let cands = all.filter(g => g.tema !== lastTema && g.ord.some(c => !used.has(c)));
+    if (!cands.length) { all.forEach(g => g.ord.forEach(c => used.delete(c))); cands = all.filter(g => g.tema !== lastTema); }
+    if (!cands.length) cands = all;
+    const g = App.pick(cands);
+    const left = g.ord.filter(c => !used.has(c));
+    const c = App.pick(left.length ? left : g.ord);
+    used.add(c); lastTema = g.tema;
     return c;
   }
   /* Hvor langt lunten er brændt, 0 til 1 */
