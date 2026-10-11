@@ -22,11 +22,11 @@
     render
   });
 
-  /* Alle ord fra alle kategorier. Ordparrene er to gode ord hver, så begge bruges. */
+  /* Alle ord fra alle kategorier (frække kun med "Frækt indhold" slået til) */
   function words(){
-    const out = [];
-    IMPOSTER_WORDS.filter(c => !c.adult || App.settings().adult).forEach(c => c.ord.forEach(pr => { out.push(pr[0]); out.push(pr[1]); }));
-    return out;
+    const out = new Set();
+    IMPOSTER_WORDS.filter(c => !c.adult || App.settings().adult).forEach(c => c.ord.forEach(w => out.add(w)));
+    return [...out];
   }
 
   function render(){

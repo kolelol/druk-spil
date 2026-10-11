@@ -1,9 +1,10 @@
 /* Bombe: telefonen tikker. Nævn noget i kategorien, og giv den videre. Den, der holder den, når den springer, drikker.
+   Ingen knapper undervejs (ejeren ville ikke have en "Sagt! Giv videre"-knap): bomben gives bare fysisk videre.
    Jo længere lunten brænder, jo mere ryster bomben, og skærmen gløder rødt (klasserne heat1-3 på skærmen). */
 (() => {
   const ID = 'bombe';
   const C = '#ff6a2a';
-  const DEF = { min: 10, max: 45, turns: true, accel: true };
+  const DEF = { min: 10, max: 45, accel: true };
   const { esc, ui } = App;
   let S = null;
   let B = null;
@@ -21,7 +22,7 @@
 
   App.register({
     id: ID, navn: 'Bombe', farve: C, ikon: BOMB,
-    kort: 'Nævn noget i kategorien, og giv bomben videre. Den, der holder den, når den springer, drikker.',
+    kort: 'Nævn noget i kategorien, og giv telefonen videre. Den, der holder den, når den springer, drikker.',
     onEnter(){ S = App.gameSettings(ID, DEF); B = null; App.keepAwake(); },
     onLeave(){ stop(); },
     render
@@ -40,7 +41,6 @@
     const c = App.pick(left); used.add(c);
     return c;
   }
-  function holder(){ return B.turns ? B.players[B.idx % B.players.length] : null; }
   /* Hvor langt lunten er brændt, 0 til 1 */
   const burnt = () => Math.min(1, (performance.now() - B.t0) / B.dur);
   const heatClass = f => f < 0.45 ? '' : f < 0.7 ? 'heat1' : f < 0.88 ? 'heat2' : 'heat3';
@@ -51,34 +51,29 @@
   }
 
   function renderSetup(){
-    const p = App.players();
-    if ('mode' in S) { delete S.mode; App.save(); }   // gammel indstilling fra dengang der var scenarier
+    for (const k of ['mode', 'turns']) if (k in S) { delete S[k]; App.save(); }   // gamle indstillinger
     return ui.shell({ title: 'Bombe', color: C, body: `
-      <div class="card"><p>Bomben tikker, men ingen ved hvor længe. Nævn noget, der passer til kategorien, og giv telefonen videre. Ingen gentagelser. Den, der holder bomben, når den springer, drikker.</p></div>
+      <div class="card"><p>Bomben tikker, men ingen ved hvor længe. Nævn noget, der passer til kategorien, og giv telefonen videre. Ingen gentagelser. Den, der holder bomben, når den springer, drikker. Ingen knapper undervejs: bare giv den videre.</p></div>
       <div class="card">
         ${ui.range('Kortest tid', 'bomb.range', S.min, 'min', 5, 90, 'sek')}
         ${ui.range('Længst tid', 'bomb.range', S.max, 'max', 5, 120, 'sek')}
         ${ui.toggle('Tikker hurtigere til sidst', 'bomb.toggle', S.accel, 'accel')}
-        ${ui.toggle('Brug spillerrækkefølge', 'bomb.toggle', S.turns, 'turns', p.length >= 2 ? 'Appen holder styr på, hvem der holder bomben' : 'Tilføj mindst 2 spillere for at bruge dette')}
       </div>`,
       footer: `<button class="btn" data-action="bomb.start">Tænd lunten</button>` });
   }
 
   function renderArmed(){
-    const who = holder();
     const html = ui.shell({ title: 'Bombe', color: C, center: true, backAction: 'bomb.setup', body: `
       ${STAGE}
       <div class="label">Kategori</div>
       <div class="big ${B.prompt.length > 24 ? 'long' : ''}">${esc(B.prompt)}</div>
-      ${who ? `<p class="muted">Det er <b>${esc(App.gen(who))}</b> tur</p>` : '<p class="muted">Sig noget, og giv telefonen videre</p>'}
-      <p class="muted small">Svar indtil nu: ${B.count}</p>`,
-      footer: `<button class="btn" data-action="bomb.next">Sagt! Giv videre</button><button class="link" data-action="bomb.swap">Ny kategori (bomben tikker videre)</button>` });
+      <p class="muted">Sig noget, og giv telefonen videre</p>`,
+      footer: `<button class="link" data-action="bomb.swap">Ny kategori (bomben tikker videre)</button>` });
     return html.replace('class="screen"', `class="screen armed ${heatClass(burnt())}"`);
   }
 
   /* Eksplosionen: lysglimt, trykbølge, stumper af bomben, der flyver ud, og gløder, der falder */
   function renderBoom(){
-    const who = holder();
     const shards = Array.from({ length: 14 }, (_, i) => {
       const a = (i / 14) * Math.PI * 2 + Math.random() * 0.4;
       const d = 150 + Math.random() * 220;
@@ -93,8 +88,8 @@
       <div class="shards">${shards}</div><div class="embers">${embers}</div>
       <main class="center">
         <div class="huge word">BOOM</div>
-        <div class="big">${who ? esc(who) + ' drikker' : 'Den, der holder bomben, drikker'}</div>
-        <p class="muted">Kategori: ${esc(B.prompt)}. Svar: ${B.count}.</p>
+        <div class="big">Den, der holder bomben, drikker</div>
+        <p class="muted">Kategori: ${esc(B.prompt)}</p>
       </main>
       <div class="footer">
         <button class="btn light" data-action="bomb.again">Ny runde</button>
@@ -104,11 +99,10 @@
   }
 
   /* ---------- tid ---------- */
-  function start(startIdx){
+  function start(){
     stop();
-    const p = App.players();
     const dur = App.rand(S.min * 1000, S.max * 1000);
-    B = { phase: 'armed', prompt: newPrompt(), turns: S.turns && p.length >= 2, players: p.slice(), idx: startIdx || 0, count: 0, t0: performance.now(), dur, boomId: null, tickId: null };
+    B = { phase: 'armed', prompt: newPrompt(), t0: performance.now(), dur, boomId: null, tickId: null };
     B.boomId = setTimeout(boom, dur);
     scheduleTick();
     App.render(true);
@@ -156,16 +150,9 @@
       if (b) b.textContent = S[key] + ' sek';
     });
   });
-  App.on('bomb.start', () => start(0));
-  App.on('bomb.again', () => start(B ? B.idx % Math.max(1, B.players.length) : 0));
+  App.on('bomb.start', start);
+  App.on('bomb.again', start);
   App.on('bomb.setup', () => { stop(); B = null; App.render(); });
-  App.on('bomb.next', () => {
-    if (!B || B.phase !== 'armed') return;
-    B.count++;
-    if (B.turns) B.idx = (B.idx + 1) % B.players.length;
-    App.audio.click();
-    App.render();
-  });
   App.on('bomb.swap', () => {
     if (!B || B.phase !== 'armed') return;
     B.prompt = newPrompt();

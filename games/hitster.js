@@ -58,7 +58,7 @@
       S = App.gameSettings(ID, DEF); H = null; SAVED = loadRun(); UI.msg = ''; UI.busy = '';
       if ('dk' in S) { if (S.dk === false) S.musik = 'int'; delete S.dk; App.save(); }   // gammel indstilling "Med dansk musik"
       App.keepAwake();
-      if (Spotify.loggedIn() && !Spotify.blocked()) refreshDevices(true);
+      if (Spotify.loggedIn() && !Spotify.blocked()) { refreshDevices(true); Spotify.silence().catch(() => {}); }   // find det stille nummer, så første pause ikke skal vente
     },
     onLeave(){ stopTimers(); pauseQuiet(); UI.testing = ''; },
     render
@@ -150,29 +150,40 @@
   }
 
   /* ---------- afspilning ---------- */
+  /* Rigtig pause: kun når man forlader Hitster. Inde i spillet bruges hush(), så Spotify-appen ikke falder i søvn. */
   function pauseQuiet(){
     if (!played || !S || !Spotify.loggedIn()) return;
-    played = false;
+    played = false; cur = null;
     Spotify.pause(dev()).catch(() => {});
   }
-  /* Afspil fra start på den valgte enhed. Er enheden forsvundet (appen blev lukket), finder vi den igen. */
-  async function playOnDevice(uri){
+  /* Stilhed i stedet for pause: sæt et nummer uden lyd på, så enheden bliver ved med at være vågen.
+     Findes der ikke et stille nummer, pauses der som før. */
+  let cur = null;   // det nummer, der spiller lige nu: { uri, at (Date.now ved start), offset (ms) }
+  function hush(){
+    if (!played || !S || !Spotify.loggedIn()) return;
+    played = false;
+    if (cur) cur.paused = Date.now();
+    Spotify.silence().then(uri => uri ? Spotify.play(uri, dev()) : Spotify.pause(dev())).catch(() => {});
+  }
+  /* Afspil på den valgte enhed. Er enheden forsvundet (appen blev lukket), finder vi den igen. */
+  async function playOnDevice(uri, positionMs){
     played = true;
-    try { await Spotify.play(uri, dev()); }
+    cur = { uri, at: Date.now(), offset: positionMs || 0 };
+    try { await Spotify.play(uri, dev(), positionMs); }
     catch (e) {
       if (e.status !== 404 && e.reason !== 'NO_ACTIVE_DEVICE') throw e;
       const list = await Spotify.devices();
       const d = list.find(x => S.device && x.name === S.device.name) || list.find(x => x.is_active) || list[0];
       if (!d) throw e;
       S.device = { id: d.id, name: d.name }; App.save();
-      await Spotify.play(uri, d.id);
+      await Spotify.play(uri, d.id, positionMs);
     }
   }
-  /* Fortsæt, hvor pausen var. Går det ikke, starter nummeret forfra. */
+  /* Fortsæt, hvor stilheden blev sat på: samme nummer, samme sted */
   async function resumePlayback(){
-    played = true;
-    try { await Spotify.resume(dev()); }
-    catch (e) { if (H && H.track) await playOnDevice(H.track.uri); else throw e; }
+    if (!H || !H.track) return;
+    const pos = cur && cur.uri === H.track.uri && cur.paused ? cur.offset + (cur.paused - cur.at) : 0;
+    await playOnDevice(H.track.uri, pos);
   }
   async function togglePause(){
     if (!H || !H.track) return;
@@ -183,7 +194,7 @@
       catch (e) { H.paused = true; UI.msg = Spotify.explain(e); App.render(); }
     } else {
       H.paused = true; App.render();
-      pauseQuiet();
+      hush();
     }
   }
   /* Streams: spil udfordreren, hvis Spotify er klar. Spillet kører videre uden musik, hvis det ikke lykkes. */
@@ -569,7 +580,7 @@
     const p = App.players();
     const src = S.mode === 'streams' ? spool() : pool();
     if (p.length < 2 || src.length < p.length + 10) return;
-    clearRun(); stopTimers(); pauseQuiet();
+    clearRun(); stopTimers(); hush();
     H = {
       mode: S.mode, phase: 'turn', players: p.slice(), idx: 0, round: 1, turn: 0, song: 1,
       goal: S.goal, sips: S.sips, bonus: S.bonus, rounds: S.mode === 'streams' ? S.hrounds : S.rounds, songs: S.songs,
@@ -618,7 +629,7 @@
       clipTimer = setTimeout(() => {
         clipTimer = null;
         if (!H) return;
-        played = true; pauseQuiet();
+        played = true; hush();
         H.cstate = 'done'; saveRun(); App.render();
       }, Math.max(200, STAGES[H.stage] * 1000 + S.lag));
     } catch (e) {
@@ -674,7 +685,7 @@
       for (let i = 0; i < 5 && !tr; i++) tr = await Spotify.findTrack(App.pick(pool()));
       if (!tr) throw new Error('Fandt ingen numre på Spotify.');
       await playOnDevice(tr.uri);
-      setTimeout(() => { played = true; pauseQuiet(); }, Math.max(200, 1000 + S.lag));
+      setTimeout(() => { played = true; hush(); }, Math.max(200, 1000 + S.lag));
     } catch (e) { UI.msg = Spotify.explain(e); }
     UI.busy = '';
     App.render();
@@ -698,7 +709,7 @@
     if (H.phase === 'place' || H.phase === 'judge' || (H.phase === 'hl' && !H.res)) runTimer();
     App.render();
   });
-  App.on('hit.setup', () => { stopTimers(); pauseQuiet(); H = null; SAVED = loadRun(); UI.msg = ''; UI.busy = ''; App.render(); });
+  App.on('hit.setup', () => { stopTimers(); hush(); H = null; SAVED = loadRun(); UI.msg = ''; UI.busy = ''; App.render(); });
   App.on('hit.play', playTurn);
   App.on('hit.slot', el => {
     if (!H || H.phase !== 'place') return;
@@ -721,7 +732,7 @@
   });
   App.on('hit.award', () => {
     if (!H || H.phase !== 'judge') return;
-    stopTimers(); pauseQuiet();
+    stopTimers(); hush();
     const n = H.marks.filter(Boolean).length, name = who();
     H.score[name] += n;
     H.last = { name, pts: n };
@@ -752,7 +763,7 @@
   App.on('hit.hlnext', () => {
     if (!H || H.phase !== 'hl' || !H.res) return;
     H.turn++;
-    if (H.turn >= H.players.length * H.rounds) { pauseQuiet(); H.phase = 'end'; clearRun(); App.audio.ding(); App.render(); return; }
+    if (H.turn >= H.players.length * H.rounds) { hush(); H.phase = 'end'; clearRun(); App.audio.ding(); App.render(); return; }
     H.idx = H.turn % H.players.length;
     H.round = Math.floor(H.turn / H.players.length) + 1;
     H.champ = H.cur; H.cur = drawChallenger(); H.res = null; H.deadline = 0;
@@ -782,7 +793,7 @@
 
   App.on('hit.next', () => {
     if (!H || H.phase !== 'reveal') return;
-    stopTimers(); pauseQuiet();
+    stopTimers(); hush();
     if (H.mode === 'klip') {
       if (H.song >= H.songs) { H.phase = 'end'; clearRun(); App.audio.ding(); App.render(); return; }
       H.song++; H.cur = draw(); H.track = null; H.res = null; H.stage = 0; H.cstate = 'idle'; H.peek = false; H.paused = false;

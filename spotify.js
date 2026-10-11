@@ -118,9 +118,32 @@ const Spotify = (() => {
 
   const devices = async () => ((await api('GET', '/me/player/devices')).devices || []).filter(d => !d.is_restricted);
   const dev = id => id ? '?device_id=' + encodeURIComponent(id) : '';
-  const play = (uri, deviceId) => api('PUT', '/me/player/play' + dev(deviceId), { uris: [uri], position_ms: 0 });
+  const play = (uri, deviceId, positionMs) => api('PUT', '/me/player/play' + dev(deviceId), { uris: [uri], position_ms: Math.max(0, Math.floor(positionMs || 0)) });
   const pause = deviceId => api('PUT', '/me/player/pause' + dev(deviceId));
   const resume = deviceId => api('PUT', '/me/player/play' + dev(deviceId));   // uden nummer: fortsætter, hvor pausen var
+
+  /* Et stille nummer. Sættes på i stedet for pause: en pauset Spotify-app på iPhone bliver lukket ned af systemet
+     efter kort tid, og så kan appen ikke styre den igen, før man selv trykker play i Spotify. Et nummer uden lyd
+     holder appen i gang. */
+  const SILENCE_KEY = 'drukspil.spotify.silence';
+  let silencing = null;
+  function silence(){
+    const c = get(SILENCE_KEY);
+    if (c && c.uri) return Promise.resolve(c.uri);
+    if (c && c.none && Date.now() - c.none < 86400000) return Promise.resolve(null);
+    if (silencing) return silencing;
+    silencing = (async () => {
+      const queries = ['A a a a a Very Good Song Samir Mesrahi', '10 minutes of silence', 'silence 10 minutes', 'silent track'];
+      for (const q of queries) {
+        const items = await search(q).catch(() => []);
+        const hit = items.find(it => /very good song|silen/i.test(it.name) && it.duration_ms >= 240000);
+        if (hit) { put(SILENCE_KEY, { uri: hit.uri, name: hit.name }); return hit.uri; }
+      }
+      put(SILENCE_KEY, { none: Date.now() });
+      return null;
+    })().finally(() => { silencing = null; });
+    return silencing;
+  }
 
   /* ---------- find nummeret på Spotify ---------- */
   /* æ og ø har ingen accent at fjerne, så de oversættes, ellers bliver "Øde ø" til "de" */
@@ -184,5 +207,5 @@ const Spotify = (() => {
     return (e && e.message) || 'Noget gik galt med Spotify.';
   }
 
-  return { SpotifyError, blocked, redirectUri, login, hasCallback, callback, loggedIn, logout, devices, play, pause, resume, findTrack, explain };
+  return { SpotifyError, blocked, redirectUri, login, hasCallback, callback, loggedIn, logout, devices, play, pause, resume, silence, findTrack, explain };
 })();
