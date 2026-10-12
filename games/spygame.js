@@ -1,9 +1,11 @@
 /* Spygame: alle får det samme ord i en kategori, undtagen spionen, der kun kender kategorien.
-   Telefonen går på omgang, så stiller man spørgsmål til hinanden på skift, og til sidst stemmer man. Hurtigt og enkelt. */
+   Telefonen går rundt om bordet, så stiller man spørgsmål til hinanden på skift, og til sidst stemmer man.
+   Så få tryk som muligt: spørgsmålene foregår på én skærm (ingen "næste spørgsmål" pr. person), og indstillingerne
+   ligger foldet sammen, så man bare trykker start. */
 (() => {
   const ID = 'spygame';
   const C = '#22c9a5';
-  const DEF = { spies: 1, rounds: 1, cats: {} };
+  const DEF = { spies: 1, cats: {} };
   const { esc, ui } = App;
   let S = null;     // gemte indstillinger
   let R = null;     // igangværende runde
@@ -22,8 +24,8 @@
 
   App.register({
     id: ID, navn: 'Spygame', farve: C, ikon: IKON,
-    kort: 'Alle får det samme ord, spionen får kun kategorien. Stil spørgsmål på skift, og find spionen.',
-    onEnter(){ S = App.gameSettings(ID, DEF); R = null; App.keepAwake(); },
+    kort: 'Alle får det samme ord, spionen får kun kategorien. Stil spørgsmål rundt om bordet, og find spionen.',
+    onEnter(){ S = App.gameSettings(ID, DEF); if ('rounds' in S) { delete S.rounds; App.save(); } R = null; App.keepAwake(); },
     render
   });
 
@@ -44,31 +46,23 @@
     const maxS = maxSpies(n);
     if (S.spies > maxS) S.spies = maxS;
     const ok = n >= 3 && enabledCats().length > 0;
+    const off = allCats().filter(c => S.cats[c.id] === false).length;
     const body = `
       <div class="card">
-        <div class="row-between">
-          <div><div class="label">Spillere</div><div class="strong">${n ? esc(p.join(', ')) : 'Ingen endnu'}</div></div>
-          <button class="btn sm ghost" data-action="go" data-to="players">Ret</button>
-        </div>
-        ${n < 3 ? '<p class="warn">Du skal bruge mindst 3 spillere.</p>' : ''}
+        <div class="label">Bordplan</div>
+        ${n >= 3 ? ui.table(p, { sm: true, start: App.holder() }) : '<p class="warn">Du skal bruge mindst 3 spillere.</p>'}
+        <div class="btn-row"><button class="btn sm ghost" data-action="go" data-to="players">Spillere</button>${n >= 3 ? '<button class="btn sm ghost" data-action="seats.open">Sæt pladser</button>' : ''}</div>
       </div>
       <div class="card">
         <div class="label">Sådan spiller I</div>
-        <p>Alle får det samme ord. Spionen får kun kategorien. Stil et spørgsmål til en anden på skift, og svar, så det passer til dit ord, men uden at gøre det for let for spionen. Så stemmer I. Rammer I spionen, drikker spionen. Rammer I forkert, drikker den, I ramte.</p>
+        <p>Alle får det samme ord. Spionen får kun kategorien. Stil et spørgsmål til en anden rundt om bordet, og svar, så det passer til ordet, men uden at gøre det for let for spionen. Så stemmer I. Rammer I spionen, drikker spionen. Rammer I forkert, drikker den, I ramte.</p>
       </div>
-      <div class="card">
+      <details class="card how">
+        <summary>Indstillinger: ${S.spies} spion${S.spies > 1 ? 'er' : ''}, ${off ? (allCats().length - off) + ' kategorier' : 'alle kategorier'}</summary>
         ${ui.stepper('Antal spioner', 'spy.step', S.spies, 'spies', n >= 3 ? 'Højst ' + maxS + ' med ' + n + ' spillere' : '')}
-        <div class="field">
-          <div class="label">Spørgerunder før afstemning</div>
-          ${ui.seg('spy.seg', [{ v: 1, l: '1 runde' }, { v: 2, l: '2 runder' }, { v: 3, l: '3 runder' }], S.rounds, 'rounds')}
-          <p class="hint">I én runde når alle at stille ét spørgsmål.</p>
-        </div>
-      </div>
-      <div class="card">
-        <div class="label">Kategorier</div>
-        <div class="chips">${allCats().map(c => `<button class="chip ${S.cats[c.id] === false ? '' : 'on'}" data-action="spy.cat" data-id="${c.id}">${esc(c.navn)}</button>`).join('')}</div>
+        <div class="chips" style="margin-top:8px">${allCats().map(c => `<button class="chip ${S.cats[c.id] === false ? '' : 'on'}" data-action="spy.cat" data-id="${c.id}">${esc(c.navn)}</button>`).join('')}</div>
         ${enabledCats().length ? '' : '<p class="warn">Vælg mindst én kategori.</p>'}
-      </div>`;
+      </details>`;
     return ui.shell({ title: 'Spygame', color: C, body, footer: `<button class="btn" data-action="spy.start" ${ok ? '' : 'disabled'}>Start runde</button>` });
   }
 
@@ -101,19 +95,16 @@
       return ui.shell({ title: 'Spygame', color: C, center: true, backAction: 'spy.setup', body: inner,
         footer: `<button class="btn" data-action="spy.hide">${last ? 'Skjul. Alle har set' : 'Skjul og giv videre'}</button>` });
     },
+    /* Spørgsmålene: én skærm. Starteren spørger en anden, den svarer og spørger videre, rundt om bordet. */
     ask(){
-      const q = R.q;
-      const name = q.list[q.i];
-      const lastQ = q.i >= q.list.length - 1;
+      const alive = R.order.filter(n => R.alive.has(n));
       return ui.shell({ title: 'Spygame', color: C, center: true, backAction: 'spy.setup', body: `
-        <div class="label">${q.title ? q.title + '. ' : ''}Spørgsmål ${q.i + 1} af ${q.list.length}</div>
-        <div class="big">${esc(name)} spørger</div>
-        ${ui.table(R.order, { sm: true, cur: name, done: R.order.filter(x => !R.alive.has(x)) })}
-        <p class="muted">Vælg en, og stil ét spørgsmål om ordet. Den, der svarer, må ikke sige ordet.</p>
+        <div class="label">${R.round > 1 ? 'Runde ' + R.round + '. ' + alive.length + ' tilbage' : 'Kategori: ' + esc(R.cat)}</div>
+        <div class="big">${esc(R.starter)} starter</div>
+        ${ui.table(R.order, { sm: true, start: R.starter, cur: R.starter, done: R.order.filter(x => !R.alive.has(x)) })}
+        <p class="muted">Stil ét spørgsmål om ordet til en anden. Den, der svarer, spørger videre. Tag en runde eller to, og stem så.</p>
         ${wordList()}`,
-        footer: lastQ
-          ? `<button class="btn" data-action="spy.tovote">Gå til afstemning</button>`
-          : `<button class="btn" data-action="spy.nextq">Næste spørgsmål</button><button class="link" data-action="spy.tovote">Spring til afstemning</button>` });
+        footer: `<button class="btn" data-action="spy.tovote">Gå til afstemning</button>` });
     },
     vote(){
       const alive = R.order.filter(n => R.alive.has(n));
@@ -154,30 +145,24 @@
     used.add(cat.id + ':' + word);
     const order = App.fromHolder();
     const spies = new Set(App.shuffle(order.slice()).slice(0, Math.min(S.spies, maxSpies(order.length))));
-    R = { phase: 'pass', idx: 0, order, round: 1, word, cat: cat.navn, words: cat.ord, spies, alive: new Set(order), q: null, result: null };
+    R = { phase: 'pass', idx: 0, order, round: 1, word, cat: cat.navn, words: cat.ord, spies, alive: new Set(order), starter: null, result: null };
     App.render();
   }
-  /* Spørgerækkefølge: tilfældig start, så rundt om bordet. Kun dem, der stadig er med. */
-  function newQuestions(rounds, title){
-    const alive = R.order.filter(n => R.alive.has(n));
-    const startAt = App.rand(0, alive.length - 1);
-    const list = [];
-    for (let r = 0; r < rounds; r++) for (let i = 0; i < alive.length; i++) list.push(alive[(startAt + i) % alive.length]);
-    R.q = { list, i: 0, title };
-    R.phase = 'ask';
-  }
+  /* Tilfældig starter blandt dem, der stadig er med */
+  function toAsk(){ R.starter = App.pick(R.order.filter(n => R.alive.has(n))); R.phase = 'ask'; }
 
   /* ---------- knapper ---------- */
   App.on('spy.step', el => {
     const maxS = maxSpies(App.players().length);
     S.spies = Math.min(maxS, Math.max(1, S.spies + Number(el.dataset.d)));
     App.save(); App.render();
+    const d = document.querySelector('details.how'); if (d) d.open = true;
   });
-  App.on('spy.seg', el => { S[el.dataset.key] = Number(el.dataset.v); App.save(); App.render(); });
   App.on('spy.cat', el => {
     const id = el.dataset.id;
     S.cats[id] = S.cats[id] === false;
     App.save(); App.render();
+    const d = document.querySelector('details.how'); if (d) d.open = true;
   });
   App.on('spy.start', start);
   App.on('spy.setup', () => { R = null; App.render(); });
@@ -187,13 +172,12 @@
     App.setHolder(el.dataset.name); R.order = App.fromHolder(); R.alive = new Set(R.order); App.render();
   });
   App.on('spy.hide', () => {
-    if (R.idx >= R.order.length - 1) { App.setHolder(R.order[R.idx]); newQuestions(S.rounds, ''); }
+    if (R.idx >= R.order.length - 1) { App.setHolder(R.order[R.idx]); toAsk(); }
     else { R.idx++; R.phase = 'pass'; }
     App.render();
   });
-  App.on('spy.nextq', () => { if (R.q.i < R.q.list.length - 1) R.q.i++; App.render(); });
   App.on('spy.tovote', () => { R.phase = 'vote'; App.render(); });
-  App.on('spy.again', () => { R.round++; newQuestions(1, 'Runde ' + R.round); App.render(); });
+  App.on('spy.again', () => { R.round++; toAsk(); App.render(); });
   App.on('spy.voteout', el => {
     const name = el.dataset.name;
     if (!R.alive.has(name)) return;

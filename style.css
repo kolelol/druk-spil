@@ -328,6 +328,8 @@ input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 
 .how { margin-top: 12px; font-size: 14px; }
 .how summary { cursor: pointer; font: 400 15px/1.2 var(--display); letter-spacing: .3px; color: var(--gold); text-shadow: var(--o-xs); padding: 6px 0; }
 .how p { font-size: 14px; margin-top: 8px; }
+details.card.how { margin-top: 0; }
+details.card.how summary { padding: 2px 0; }
 .uri { margin: 8px 0; padding: 9px 11px; border-radius: 10px; border: 2px solid var(--ink); background: linear-gradient(var(--inset), var(--inset2)); box-shadow: inset 0 3px 5px rgba(0, 0, 0, .5); font: 600 13px/1.4 var(--sans); word-break: break-all; -webkit-user-select: text; user-select: text; }
 
 /* Bordplan: bordet set oppefra med spillerne rundt om, plads 0 nederst og derefter med uret */
