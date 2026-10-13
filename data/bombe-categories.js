@@ -4,15 +4,15 @@
    (partygamesnight.com) og det danske drukspil "Kategorier" (bilmærker, danske byer). Oversat, ikke opfundet.
    Udeladt fra kilderne: ord-lege ("et ord på 8 bogstaver"), åbne "måder at..."-opgaver og rene paratvidens-lister.
    Temaerne bruges af spillet til at skifte slags hver gang. Hold det danske nede.
-   BOMBE_CATEGORIES_ADULT vises kun med "Frækt indhold" slået til. 
+   BOMBE_CATEGORIES_ADULT vises kun med "Frækt indhold" slået til.
    Hver kategori er vurderet af fem testpersoner (sjov 3+, nem 3,4+); resten er fjernet (2026-10-12). */
 const BOMBE_CATEGORIES = [
   { tema: 'Byen og druk', ord: [
     'Ølmærker', 'Shots', 'Cocktails', 'Spiritus', 'Drukspil', 'Festsange alle kender',
-    'Ting man tager med til en hjemmefest',
-    'Ting man kan have på til en udklædningsfest', 'Natmad',
+
+    'Natmad',
     'Ting man mister i byen',
-    'Festivaler', 'Ord for at være fuld', 'Ting man kan bunde', 'Ting man kan drikke af', 'Ting man kan åbne en øl med'
+    'Festivaler'
   ]},
   { tema: 'Mad og drikke', ord: [
     'Mad', 'Drikkevarer', 'Morgenmad', 'Frugter', 'Grøntsager', 'Noget på en pizza', 'Usund mad', 'Desserter',
@@ -60,6 +60,6 @@ const BOMBE_CATEGORIES = [
 
 const BOMBE_CATEGORIES_ADULT = [
   'Sexstillinger', 'Kaldenavne for penis', 'Kaldenavne for bryster', 'Kaldenavne for bagdelen', 'Ord for at have sex',
-  'Steder man kan have sex', 'Frække ord', 'Pornokategorier', 'Sexlegetøj', 'Ting man finder i et natbord'
+  'Steder man kan have sex', 'Pornokategorier', 'Sexlegetøj'
 
 ];

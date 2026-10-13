@@ -40,8 +40,8 @@ const IMPOSTER_WORDS = [
     'Dans', 'Beerpong', 'Padel', 'Gaming', 'Tatovering', 'Paintball', 'Gokart',
     'Bungeejump', 'Faldskærmsudspring', 'Boksetræning', 'Fodboldkamp', 'Koncert',
     'Date', 'Bytur', 'Forfest', 'Efterfest', 'Drengetur', 'Skiferie', 'Sydtur', 'Grillaften',
-    'Netflix og chill', 'Sauna', 'Massage',
-    'Bryllup', 'Nytårsaften', 'Juleaften', 'Halloween', 'Festival', 'Blind date', 'Tinder-date'
+    'Sauna', 'Massage',
+    'Bryllup', 'Nytårsaften', 'Juleaften', 'Halloween', 'Festival', 'Blind date'
   ]},
   { id: 'jobs', navn: 'Jobs', ord: [
     'Læge', 'Brandmand', 'Kok', 'Pilot', 'Blikkenslager', 'Astronaut', 'Tryllekunstner', 'Livredder', 'Bartender',
@@ -79,7 +79,7 @@ const IMPOSTER_WORDS = [
     'Siri', 'ChatGPT', 'Robot', 'Drone', 'Bitcoin', 'iPhone', 'Instagram', 'TikTok', 'Snapchat', 'Netflix', 'Spotify',
     'YouTube', 'Facebook', 'Tinder', 'MobilePay', 'Playstation', 'Xbox', 'Nintendo Switch', 'Minecraft',
     'Fortnite', 'FIFA', 'GTA', 'Call of Duty', 'Counter-Strike', 'Pokémon', 'Mario', 'Among Us',
-    'Temu', 'Tesla', 'Meme', 'Gruppechat',
+    'Temu', 'Tesla',
     'Discord', 'Twitch', 'OnlyFans'
   ]},
   { id: 'toej', navn: 'Tøj og mærker', ord: [
@@ -120,10 +120,10 @@ const IMPOSTER_WORDS = [
   ]},
   { id: 'fraekt', navn: 'Frækt', adult: true, ord: [
     'Tinder', 'Håndjern', 'Bind for øjnene', 'Onenightstand', 'Kondom', 'Stripklub', 'Swingerklub', 'Dildo', 'Vibrator',
-    'Pornhub', 'OnlyFans', 'Lingeri', 'Sugemærke', 'Morgenstiv', 'Trekant', 'Missionær', 'Doggy', '69', 'Cowgirl',
-    'Sexting', 'Nudes', 'Blowjob', 'Pik', 'Bryster', 'Bagdel', 'Glidecreme', 'Morgenbolle', 'Tungekys',
-    'Bolleven', 'Pornostjerne', 'Orgasme', 'Onani', 'Striptease', 'Lapdance', 'Bordelet', 'Bagsædet',
-    'Walk of shame', 'Sugardaddy', 'Milf', 'Fuckboy', 'Dickpic', 'Nøgenbadning', 'Kyssesygen', 'Klamydia',
+    'Pornhub', 'OnlyFans', 'Lingeri', 'Sugemærke', 'Trekant', 'Missionær', 'Doggy', '69', 'Cowgirl',
+    'Sexting', 'Nudes', 'Blowjob', 'Pik', 'Bryster', 'Bagdel', 'Glidecreme', 'Tungekys',
+    'Bolleven', 'Pornostjerne', 'Orgasme', 'Onani', 'Striptease', 'Lapdance',
+    'Dickpic', 'Nøgenbadning',
     'Sexdukke', 'Latex', 'Fodfetich', 'Spanking', 'Fifty Shades of Grey', 'Kamasutra', 'Strip-poker', 'Flaskehalsen', 'Sandhed eller konsekvens'
   ]}
 ];
