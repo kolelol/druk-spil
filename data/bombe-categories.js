@@ -16,9 +16,9 @@ const BOMBE_CATEGORIES = [
   ]},
   { tema: 'Mad og drikke', ord: [
     'Mad', 'Drikkevarer', 'Morgenmad', 'Frugter', 'Grøntsager', 'Noget på en pizza', 'Usund mad', 'Desserter',
-    'Udenlandsk mad', 'Saucer', 'Noget i en sandwich', 'Steder man kan spise',
+    'Udenlandsk mad', 'Saucer', 'Noget i en sandwich',
     'Fastfood', 'Is-smage', 'Slik', 'Sodavand', 'Kager',
-    'Ting i et køleskab', 'Ting man kan grille', 'Pålæg', 'Mad man spiser med hænderne'
+    'Ting i et køleskab', 'Ting man kan grille', 'Pålæg'
   ]},
   { tema: 'Dyr', ord: [
     'Dyr', 'Dyr i havet', 'Kæledyr', 'Dyr på en bondegård', 'Hunderacer', 'Dyr i junglen',
@@ -33,13 +33,13 @@ const BOMBE_CATEGORIES = [
     'Spil man spillede som barn', 'Youtubere', 'Emojis', 'Hjemmesider'
   ]},
   { tema: 'Mærker og ting', ord: [
-    'Bilmærker', 'Tøjmærker', 'Sneakermærker', 'Store firmaer', 'Supermarkeder', 'Dyre ting', 'Ting rige mennesker køber',
+    'Bilmærker', 'Tøjmærker', 'Sneakermærker', 'Store firmaer', 'Supermarkeder',
     'Tøj', 'Sko', 'Ting på hovedet', 'Legetøj',
     'Værktøj',
-    'Våben', 'Instrumenter', 'Transportmidler', 'Ting med hjul', 'Ting der flyver', 'Ting man kan sidde på',
+    'Våben', 'Instrumenter', 'Transportmidler', 'Ting med hjul', 'Ting der flyver',
     'Ting i en kuffert', 'Ting i et køkken', 'Ting på et badeværelse', 'Ting i et soveværelse', 'Ting i en bil', 'Ting i en lufthavn',
     'Ting på en strand', 'Ting man tager med på camping',
-    'Ting der kan eksplodere', 'Ting der larmer'
+    'Ting der kan eksplodere'
   ]},
   { tema: 'Verden', ord: [
     'Lande', 'Byer', 'Byer i Danmark', 'Byer i USA',
@@ -51,10 +51,7 @@ const BOMBE_CATEGORIES = [
     'Skuespillere'
   ]},
   { tema: 'Klassikere', ord: [
-    'Pigenavne', 'Drengenavne', 'Kropsdele', 'Jobs', 'Farlige jobs', 'Jobs med uniform', 'Forbrydelser', 'Dårlige vaner',
-    'Noget rødt', 'Noget grønt', 'Noget rundt', 'Noget varmt', 'Noget koldt',
-    'Noget der lugter', 'Noget blødt', 'Noget vådt',
-    'Noget man kan putte i lommen'
+    'Pigenavne', 'Drengenavne', 'Kropsdele', 'Jobs', 'Forbrydelser'
   ]}
 ];
 

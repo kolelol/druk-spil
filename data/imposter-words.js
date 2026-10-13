@@ -32,7 +32,7 @@ const IMPOSTER_WORDS = [
     'Fængslet', 'Stadion', 'Biografen', 'Natklubben',
     'Baren', 'Svømmehallen', 'Zoologisk Have', 'Festivalen', 'Hotellet', 'Færgen',
     'Tankstationen', 'McDonald\'s', 'Ikea', 'Legoland', 'Roskilde Festival', 'Christiania',
-    'Aarhus', 'København', 'Sommerhuset',
+    'Aarhus', 'København',
     'Skadestuen'
   ]},
   { id: 'aktiviteter', navn: 'Aktiviteter', ord: [
@@ -40,15 +40,15 @@ const IMPOSTER_WORDS = [
     'Dans', 'Beerpong', 'Padel', 'Gaming', 'Tatovering', 'Paintball', 'Gokart',
     'Bungeejump', 'Faldskærmsudspring', 'Boksetræning', 'Fodboldkamp', 'Koncert',
     'Date', 'Bytur', 'Forfest', 'Efterfest', 'Drengetur', 'Skiferie', 'Sydtur', 'Grillaften',
-    'Sauna', 'Massage',
-    'Bryllup', 'Nytårsaften', 'Juleaften', 'Halloween', 'Festival', 'Blind date'
+
+    'Bryllup', 'Nytårsaften', 'Juleaften', 'Halloween', 'Festival'
   ]},
   { id: 'jobs', navn: 'Jobs', ord: [
     'Læge', 'Brandmand', 'Kok', 'Pilot', 'Blikkenslager', 'Astronaut', 'Tryllekunstner', 'Livredder', 'Bartender',
     'Detektiv', 'Politibetjent', 'Dørmand', 'Sygeplejerske',
     'Advokat', 'Dommer', 'Landmand', 'Tatovør', 'Stripper', 'Youtuber',
     'Influencer', 'Fodboldspiller', 'Soldat', 'Taxachauffør', 'Pædagog',
-    'Statsminister', 'Konge', 'Pizzabager', 'Kassedame', 'Rapper', 'DJ', 'Skuespiller', 'Model', 'Personlig træner',
+    'Statsminister', 'Konge', 'Pizzabager', 'Rapper', 'DJ', 'Skuespiller', 'Model', 'Personlig træner',
     'Klovn', 'Spion', 'Pirat'
   ]},
   { id: 'sport', navn: 'Sport', ord: [
@@ -71,8 +71,8 @@ const IMPOSTER_WORDS = [
     'Paris', 'New York', 'Tokyo', 'London', 'Italien', 'Australien', 'Brasilien', 'Egypten', 'Hawaii', 'Las Vegas', 'Hollywood',
     'Dubai', 'Rom', 'Berlin', 'Amsterdam', 'Barcelona', 'Mallorca', 'Sunny Beach', 'Prag', 'Budapest', 'Sverige', 'Norge', 'Tyskland',
     'Spanien', 'Grækenland', 'Tyrkiet', 'Thailand', 'USA', 'Kina', 'Japan', 'Rusland', 'Grønland', 'Nordkorea',
-    'Aarhus', 'København', 'Flensborg',
-    'Ibiza', 'Marokko', 'Mexico', 'Indien', 'Månen'
+    'Aarhus', 'København',
+    'Ibiza', 'Marokko', 'Mexico', 'Indien'
   ]},
   { id: 'tech', navn: 'Teknologi og internet', ord: [
     'Selfie', 'Emoji', 'Screenshot',
@@ -91,11 +91,11 @@ const IMPOSTER_WORDS = [
     'Burger King', 'Starbucks', 'Red Bull', 'Monster', 'Marlboro'
   ]},
   { id: 'transport', navn: 'Transport', ord: [
-    'Fly', 'Taxa', 'Cykel', 'Motorcykel', 'Helikopter', 'Roadtrip',
+    'Fly', 'Taxa', 'Cykel', 'Motorcykel', 'Helikopter',
     'Elløbehjul', 'Færge', 'Tesla', 'BMW', 'Mercedes', 'Audi',
     'Porsche', 'Ferrari', 'Lamborghini', 'Traktor', 'Knallert', 'Politibil',
-    'Jetski', 'Speedbåd', 'Segway', 'Ubåd', 'Raket',
-    'Fartkontrol', 'Parkeringsbøde', 'Kørekort', 'Natbus'
+    'Jetski', 'Speedbåd', 'Ubåd', 'Raket',
+    'Kørekort', 'Natbus'
   ]},
   { id: 'kendte', navn: 'Kendte', ord: [
     'Messi', 'Ronaldo', 'Mbappé', 'Neymar', 'Haaland', 'Beckham', 'Zlatan', 'Christian Eriksen',
@@ -121,9 +121,9 @@ const IMPOSTER_WORDS = [
   { id: 'fraekt', navn: 'Frækt', adult: true, ord: [
     'Tinder', 'Håndjern', 'Bind for øjnene', 'Onenightstand', 'Kondom', 'Stripklub', 'Swingerklub', 'Dildo', 'Vibrator',
     'Pornhub', 'OnlyFans', 'Lingeri', 'Sugemærke', 'Trekant', 'Missionær', 'Doggy', '69', 'Cowgirl',
-    'Sexting', 'Nudes', 'Blowjob', 'Pik', 'Bryster', 'Bagdel', 'Glidecreme', 'Tungekys',
+    'Sexting', 'Nudes', 'Blowjob', 'Pik', 'Bryster', 'Bagdel', 'Glidecreme',
     'Bolleven', 'Pornostjerne', 'Orgasme', 'Onani', 'Striptease', 'Lapdance',
-    'Dickpic', 'Nøgenbadning',
-    'Sexdukke', 'Latex', 'Fodfetich', 'Spanking', 'Fifty Shades of Grey', 'Kamasutra', 'Strip-poker', 'Flaskehalsen', 'Sandhed eller konsekvens'
+    'Dickpic',
+    'Sexdukke', 'Latex', 'Fodfetich', 'Spanking', 'Fifty Shades of Grey', 'Kamasutra', 'Strip-poker'
   ]}
 ];
