@@ -77,7 +77,7 @@
       if ('dk' in S) { if (S.dk === false) S.musik = 'int'; delete S.dk; App.save(); }   // gammel indstilling "Med dansk musik"
       if (S.rec) Object.keys(S.rec).filter(k => k.startsWith('klip|')).forEach(k => { delete S.rec[k]; App.save(); });   // rekorder fra den gamle kæde
       App.keepAwake();
-      if (Spotify.loggedIn() && !Spotify.blocked()) { refreshDevices(true); Spotify.silence().catch(() => {}); }   // find det stille nummer, så første pause ikke skal vente
+      if (Spotify.loggedIn() && !Spotify.blocked()) { refreshDevices(true); }
     },
     onLeave(){ stopTimers(); pauseQuiet(); UI.testing = ''; },
     render
@@ -278,20 +278,20 @@
   }
 
   /* ---------- afspilning ---------- */
-  /* Rigtig pause: kun når man forlader Hitster. Inde i spillet bruges hush(), så Spotify-appen ikke falder i søvn. */
+  /* Pause, når man forlader Hitster */
   function pauseQuiet(){
     if (!played || !S || !Spotify.loggedIn()) return;
     played = false; cur = null;
     Spotify.pause(dev()).catch(() => {});
   }
-  /* Stilhed i stedet for pause: sæt et nummer uden lyd på, så enheden bliver ved med at være vågen.
-     Findes der ikke et stille nummer, pauses der som før. */
+  /* Rigtig pause inde i spillet. Før spillede vi et stille nummer, så Spotify-appen på iPhone ikke faldt i søvn, men ejeren vil
+     ikke have "10 minutes of silence" i sin Spotify (2026-10-17). Forsvinder enheden, finder playOnDevice den igen. */
   let cur = null;   // det nummer, der spiller lige nu: { uri, at (Date.now ved start), offset (ms) }
   function hush(){
     if (!played || !S || !Spotify.loggedIn()) return;
     played = false;
     if (cur) cur.paused = Date.now();
-    Spotify.silence().then(uri => uri ? Spotify.play(uri, dev()) : Spotify.pause(dev())).catch(() => {});
+    Spotify.pause(dev()).catch(() => {});
   }
   /* Afspil på den valgte enhed. Er enheden forsvundet (appen blev lukket), finder vi den igen. */
   async function playOnDevice(uri, positionMs){
