@@ -55,7 +55,7 @@
       </div>
       <div class="card">
         <div class="label">Sådan spiller I</div>
-        <p>Alle får det samme ord. Spionen får kun kategorien. Stil et spørgsmål til en anden rundt om bordet, og svar, så det passer til ordet, men uden at gøre det for let for spionen. Så stemmer I. Rammer I spionen, drikker spionen. Rammer I forkert, drikker den, I ramte.</p>
+        <p>Alle får det samme ord. Spionen får kun kategorien. Stil et spørgsmål til en anden rundt om bordet, og svar, så det passer til ordet, men uden at gøre det for let for spionen. Så stemmer I. Rammer I spionen, må spionen gætte ordet: rigtigt, og alle andre drikker 2. Forkert, og spionen drikker 4. Rammer I forkert, drikker den, I ramte, 2 og er ude, og I spørger videre.</p>
       </div>
       <details class="card how">
         <summary>Indstillinger: ${S.spies} spion${S.spies > 1 ? 'er' : ''}, ${off ? (allCats().length - off) + ' kategorier' : 'alle kategorier'}</summary>
@@ -85,10 +85,10 @@
       const isSpy = R.spies.has(name);
       /* Begge kort har samme opbygning, så ingen kan se forskel på afstand */
       const inner = isSpy
-        ? `<div class="reveal-box same"><div class="label">${esc(name)}</div><div class="big accent">Du er spionen</div>
+        ? `<div class="reveal-box same"><div class="label">${esc(name)}</div><div class="big">Du er spionen</div>
             <p class="muted">Kategori: <b>${esc(R.cat)}</b></p>
             <p class="muted">Du kender ikke ordet. Spørg og svar, som om du gør. Når alle har set deres rolle, kan du se ordlisten.</p></div>`
-        : `<div class="reveal-box same"><div class="label">${esc(name)}, dit ord er</div><div class="big">${esc(R.word)}</div>
+        : `<div class="reveal-box same"><div class="label">${esc(name)}</div><div class="big">${esc(R.word)}</div>
             <p class="muted">Kategori: <b>${esc(R.cat)}</b></p>
             <p class="muted">Hold det for dig selv. Svar, så det passer, men ikke for tydeligt.</p></div>`;
       const last = R.idx === R.order.length - 1;
@@ -111,15 +111,23 @@
       return ui.shell({ title: 'Spygame', color: C, backAction: 'spy.setup', body: `
         <div class="label">Afstemning</div>
         <h2>Hvem er spionen?</h2>
-        <p class="muted">Tal sammen, bliv enige, og tryk på navnet.</p>
-        <div class="vote-grid">${alive.map(n => `<button class="btn ghost" data-action="spy.voteout" data-name="${esc(n)}">${esc(n)}</button>`).join('')}</div>` });
+        <p class="muted">Tal sammen, bliv enige, og tryk på navnet. Tryk igen for at stemme ud.</p>
+        <div class="vote-grid">${alive.map(n => `<button class="btn ${R.pick === n ? 'danger' : 'ghost'}" data-action="spy.voteout" data-name="${esc(n)}">${R.pick === n ? 'Ud med ' + esc(n) + '?' : esc(n)}</button>`).join('')}</div>` });
+    },
+    /* Spionen er taget: ét gæt på ordet, ligesom i Imposter. Spionen kan se ordlisten, så det er et reelt gæt. */
+    caught(){
+      return ui.shell({ title: 'Spygame', color: C, center: true, backAction: 'spy.setup', body: `
+        <div class="big">${esc(R.caughtName)} var spionen</div>
+        <p class="muted">Sidste chance: ${esc(R.caughtName)} gætter ordet højt. Rigtigt: alle andre drikker 2. Forkert: ${esc(R.caughtName)} drikker 4.</p>
+        ${wordList()}`,
+        footer: `<button class="btn" data-action="spy.guess" data-ok="1">Rigtigt gæt</button><button class="btn ghost" data-action="spy.guess" data-ok="0">Forkert gæt</button>` });
     },
     result(){
       const r = R.result;
       if (!r.over) {
         return ui.shell({ title: 'Spygame', color: C, center: true, backAction: 'spy.setup', body: `
           <div class="big">${esc(r.name)} var ikke spionen</div>
-          <p class="muted">${esc(r.name)} drikker 2 slurke og er ude. Spionen er stadig iblandt jer, så spørg videre.</p>`,
+          <p class="muted">${esc(r.name)} drikker 2 slurke og er ude. ${spiesLeft() > 1 ? "Spionerne er" : "Spionen er"} stadig iblandt jer, så spørg videre.</p>`,
           footer: `<button class="btn" data-action="spy.again">Spørg videre</button><button class="link" data-action="spy.tovote">Direkte til afstemning</button>` });
       }
       const spies = [...R.spies];
@@ -165,7 +173,24 @@
     const d = document.querySelector('details.how'); if (d) d.open = true;
   });
   App.on('spy.start', start);
-  App.on('spy.setup', () => { R = null; App.render(); });
+  /* Midt i en runde kræver tilbage-pilen to tryk */
+  let backArmed = 0;
+  App.on('spy.setup', () => {
+    const live = R && !(R.phase === 'result' && R.result && R.result.over);
+    if (live && Date.now() - backArmed > 2500) { backArmed = Date.now(); App.toast('Tryk igen for at afbryde runden'); return; }
+    backArmed = 0; R = null; App.render();
+  });
+  App.on('spy.guess', el => {
+    if (!R || R.phase !== 'caught') return;
+    const ok = el.dataset.ok === '1', name = R.caughtName, sl = spiesLeft();
+    const rest = sl > 0 ? ` Der er stadig ${sl} spion iblandt jer, der slap.` : '';
+    R.result = ok
+      ? { over: true, caught: false, title: `${name} gættede ordet`, text: `Spionen reddede sig. Alle andre drikker 2 slurke.${rest}` }
+      : { over: true, caught: true, title: `${name} gættede forkert`, text: `${name} drikker 4 slurke.${rest}` };
+    R.phase = 'result';
+    if (ok) App.audio.ding();
+    App.render();
+  });
   App.on('spy.reveal', () => { R.phase = 'reveal'; App.render(); });
   App.on('spy.from', el => {
     if (!R || R.phase !== 'pass' || R.idx !== 0) return;
@@ -176,17 +201,18 @@
     else { R.idx++; R.phase = 'pass'; }
     App.render();
   });
-  App.on('spy.tovote', () => { R.phase = 'vote'; App.render(); });
+  App.on('spy.tovote', () => { R.phase = 'vote'; R.pick = null; App.render(); });
   App.on('spy.again', () => { R.round++; toAsk(); App.render(); });
   App.on('spy.voteout', el => {
     const name = el.dataset.name;
     if (!R.alive.has(name)) return;
+    if (R.pick !== name) { R.pick = name; App.render(); return; }   // første tryk vælger, andet tryk stemmer ud
+    R.pick = null;
     R.alive.delete(name);
     const caught = R.spies.has(name);
     const sl = spiesLeft(), ol = othersLeft();
     let r;
-    if (caught && sl > 0) r = { over: true, caught, title: `${name} var spionen`, text: `${name} drikker 4 slurke. Men der er stadig ${sl} spion iblandt jer, der slap. Alle andre drikker 2.` };
-    else if (caught) r = { over: true, caught, title: `${name} var spionen`, text: `Afsløret. ${name} drikker 4 slurke.` };
+    if (caught) { R.caughtName = name; R.phase = 'caught'; App.vibrate([80, 60, 80]); App.audio.ding(); App.render(); return; }
     else if (sl >= ol) r = { over: true, caught, title: `${name} var ikke spionen`, text: `Spionerne er nu lige så mange som jer andre, så de har vundet. Alle andre end spionerne drikker 4 slurke.` };
     else r = { over: false, name };
     R.result = r;

@@ -48,6 +48,8 @@ const App = (() => {
   function ac(){
     if (!store.settings.sound) return null;
     try {
+      /* iPhone på lydløs: "playback" gør, at bomben stadig kan høres (Safari 17+) */
+      if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback';
       if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
       if (ctx.state === 'suspended') ctx.resume();
       return ctx;
@@ -90,6 +92,16 @@ const App = (() => {
   function vibrate(pattern){
     if (!store.settings.vibrate || !navigator.vibrate) return;
     try { navigator.vibrate(pattern); } catch (e) {}
+  }
+
+  /* Kort besked øverst på skærmen, fx "Tryk igen for at afbryde runden" */
+  let toastId = null;
+  function toast(msg){
+    let t = document.getElementById('toast');
+    if (!t) { t = document.createElement('div'); t.id = 'toast'; document.body.appendChild(t); }
+    t.textContent = msg;
+    t.classList.remove('show'); void t.offsetWidth; t.classList.add('show');
+    clearTimeout(toastId); toastId = setTimeout(() => t.classList.remove('show'), 2200);
   }
 
   /* ---------- hold skærmen tændt under spil ---------- */
@@ -226,15 +238,16 @@ const App = (() => {
   function renderPlayers(){
     const list = store.players.map((p, i) => `<div class="player-row">${avatar(p)}<span class="name">${esc(p)}</span><button class="x" data-action="players.remove" data-i="${i}" aria-label="Fjern ${esc(p)}">${icons.x}</button></div>`).join('');
     return shell({ title: 'Spillere', back: playersBack, body: `
+      <p class="hint" style="text-align:center;margin-top:0">Skriv navnene i den rækkefølge, I sidder rundt om bordet. Så er bordplanen klar.</p>
       <form class="input-row" data-form="players.add" autocomplete="off">
-        <input id="player-input" maxlength="16" placeholder="Skriv et navn" autocomplete="off" autocapitalize="words" enterkeyhint="done">
+        <input id="player-input" maxlength="16" placeholder="${store.players.length ? 'Nr. ' + (store.players.length + 1) + ' ved bordet' : 'Den, der har telefonen'}" autocomplete="off" autocapitalize="words" enterkeyhint="done">
         <button class="btn sm" type="submit">Tilføj</button>
       </form>
+      <div class="players">${list || '<p class="muted">Ingen spillere endnu. Imposter kræver mindst 3.</p>'}</div>
       ${store.players.length >= 3 ? `<div class="card"><div class="label">Bordplan</div>
         <p>Telefonen går rundt om bordet i den her rækkefølge. Sid I anderledes, så sæt pladserne.</p>
         ${table(store.players, { sm: true })}
         <button class="btn sm ghost" style="align-self:center" data-action="seats.open">Sæt pladser</button></div>` : ''}
-      <div class="players">${list || '<p class="muted">Ingen spillere endnu. Imposter kræver mindst 3.</p>'}</div>
       ${store.players.length ? '<button class="link" data-action="players.clear">Fjern alle</button>' : ''}`,
       footer: `<button class="btn" data-action="go" data-to="${playersBack}">Færdig</button>` });
   }
@@ -246,10 +259,10 @@ const App = (() => {
     return shell({ title: 'Bordplan', back: seatBack, body: `
       <p class="hint" style="text-align:center">${seatDraft.length
         ? (done ? 'Alle sidder. Tjek, at det passer.' : 'Tryk på den, der sidder ved siden af, og fortsæt rundt.')
-        : 'Tryk på navnene i den rækkefølge, I sidder rundt om bordet. Start med den, der har telefonen.'}</p>
+        : 'Tryk på navnene i den rækkefølge, I sidder rundt om bordet. Start med den, der har telefonen, og gå samme vej rundt hele tiden.'}</p>
       ${table(seatDraft, { empty: rest.length })}
       <div class="chips" style="justify-content:center">${rest.map(p => `<button class="chip on" data-action="seats.pick" data-name="${esc(p)}">${esc(p)}</button>`).join('')}</div>
-      ${seatDraft.length ? '<button class="link" data-action="seats.reset">Start forfra</button>' : ''}`,
+      ${seatDraft.length ? '<div class="btn-row"><button class="link" data-action="seats.undo">Fortryd sidste</button><button class="link" data-action="seats.reset">Start forfra</button></div>' : ''}`,
       footer: `<button class="btn" data-action="seats.done" ${done ? '' : 'disabled'}>Gem bordplan</button>` });
   }
 
@@ -275,7 +288,9 @@ const App = (() => {
     const key = screen + ':' + (k ? (k.dataset.action || k.className) : '');
     /* Kun inde i samme spil (eller på eksplosionen, hvor hele skærmen er en knap), ikke ved åbning eller på forsiden */
     if (key !== lastKey) {
-      if (screen === lastScreen || (k && k.matches('.screen[data-action]'))) guardUntil = performance.now() + 500;
+      /* Eksplosionen får længere spærring: den, der griber telefonen, skal ikke starte en ny bombe ved et uheld */
+      if (k && k.matches('.screen[data-action]')) guardUntil = performance.now() + 1200;
+      else if (screen === lastScreen) guardUntil = performance.now() + 500;
       lastKey = key; lastScreen = screen;
     }
   }
@@ -289,17 +304,25 @@ const App = (() => {
   on('players.add', form => {
     const input = form.querySelector('input');
     const name = input.value.trim().replace(/\s+/g, ' ');
-    if (name && !store.players.some(p => p.toLowerCase() === name.toLowerCase()) && store.players.length < 30) {
+    const dup = name && store.players.some(p => p.toLowerCase() === name.toLowerCase());
+    if (name && !dup && store.players.length < 30) {
       store.players.push(name); save(); render();
     }
     const again = document.getElementById('player-input');
     if (again) { again.value = ''; again.focus(); }
+    if (dup) toast(name + ' er der allerede');
   });
   on('players.remove', el => { store.players.splice(Number(el.dataset.i), 1); save(); render(); });
-  on('players.clear', () => { store.players = []; save(); render(); });
+  /* "Fjern alle" kræver to tryk, så et fejltryk ikke sletter hele bordet */
+  let clearArmed = 0;
+  on('players.clear', el => {
+    if (Date.now() - clearArmed > 3000) { clearArmed = Date.now(); el.textContent = 'Tryk igen for at fjerne alle'; return; }
+    clearArmed = 0; store.players = []; save(); render();
+  });
   on('seats.open', el => { seatBack = el.dataset.back || screen; seatDraft = []; go('seats'); });
   on('seats.pick', el => { const n = el.dataset.name; if (!seatDraft.includes(n)) seatDraft.push(n); render(); });
   on('seats.reset', () => { seatDraft = []; render(); });
+  on('seats.undo', () => { seatDraft.pop(); render(); });
   on('seats.done', () => {
     if (seatDraft.length !== store.players.length) return;
     store.players = seatDraft.slice(); holderName = seatDraft[0]; save(); go(seatBack);
@@ -350,6 +373,7 @@ const App = (() => {
     holder, setHolder, fromHolder,
     settings: () => store.settings,
     audio, vibrate, keepAwake, icons,
+    toast,
     ui: { shell, toggle, seg, stepper, range, syncRange, avatar, table }
   };
 })();

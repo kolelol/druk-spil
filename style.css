@@ -256,6 +256,7 @@ input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 
 .screen.boom { cursor: pointer; }
 .screen.boom .tap { font: 400 18px/1.2 var(--display); letter-spacing: .3px; color: #fff; text-shadow: var(--o-xs); animation: throb 1s ease-in-out .9s infinite alternate; }
 .screen.boom .label { color: #fff; }
+.screen.boom .boom-back { position: absolute; top: calc(10px + var(--sat)); left: 14px; z-index: 9; }
 @keyframes boomIn { from { transform: scale(1.06); filter: brightness(2); } to { transform: none; filter: none; } }
 @keyframes rays { from { transform: translate(-50%, -50%) rotate(0); } to { transform: translate(-50%, -50%) rotate(360deg); } }
 @keyframes shake { 0%, 100% { transform: none; } 20% { transform: translate(-6px, 2px) rotate(-2deg); } 40% { transform: translate(6px, -2px) rotate(2deg); } 60% { transform: translate(-4px, 1px); } 80% { transform: translate(4px, -1px); } }
@@ -352,6 +353,10 @@ details.card.how summary { padding: 2px 0; }
 .seat.empty span:last-child { color: var(--muted); }
 button.seat:active .avatar { transform: scale(.9); }
 @keyframes seatPulse { from { box-shadow: 0 0 0 3px var(--gold), 0 0 8px 2px rgba(255, 210, 63, .4); } to { box-shadow: 0 0 0 3px var(--gold), 0 0 20px 6px rgba(255, 210, 63, .75); } }
+
+/* Besked-boble øverst (App.toast) */
+#toast { position: fixed; left: 50%; top: calc(74px + var(--sat)); z-index: 30; transform: translate(-50%, -8px); opacity: 0; pointer-events: none; max-width: calc(100vw - 32px); padding: 10px 16px 9px; border-radius: 12px; border: 2.5px solid var(--ink); background: linear-gradient(#ffe36b, #ffc531 50%, #f6a41a); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .5), 0 4px 0 var(--ink), 0 8px 16px rgba(0, 0, 0, .35); color: #fff; font: 400 17px/1.2 var(--display); letter-spacing: .3px; text-shadow: var(--o-xs); text-align: center; transition: opacity .18s, transform .18s; }
+#toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 /* Små indgangsanimationer, kun når et tryk skifter skærm */
 #app.anim main.center > .big, #app.anim .huge, #app.anim .avatar.xl { animation: pop .38s cubic-bezier(.2, 1.4, .4, 1) both; }

@@ -70,12 +70,12 @@
   }
 
   function renderArmed(){
-    const html = ui.shell({ title: 'Bombe', color: C, center: true, body: `
+    const html = ui.shell({ title: 'Bombe', color: C, center: true, backAction: 'bomb.back', body: `
       ${STAGE}
       <div class="label">Kategori</div>
       <div class="big ${B.prompt.length > 24 ? 'long' : ''}">${esc(B.prompt)}</div>
-      <p class="muted">Sig noget, og giv telefonen videre</p>`,
-      footer: `<button class="link" data-action="bomb.swap">Ny kategori (bomben tikker videre)</button>` });
+      <p class="muted">Sig noget, og giv telefonen videre. Ingen gentagelser.</p>`,
+      footer: B.swapped ? '' : `<button class="link" data-action="bomb.swap">Ny kategori (én gang pr. runde)</button>` });
     return html.replace('class="screen"', `class="screen armed ${heatClass(burnt())}"`);
   }
 
@@ -93,6 +93,7 @@
     return `<div class="screen boom" style="--accent:${C}" data-action="bomb.again">
       <div class="flash"></div><div class="wave"></div><div class="wave w2"></div>
       <div class="shards">${shards}</div><div class="embers">${embers}</div>
+      <button class="back boom-back" data-action="go" data-to="home" aria-label="Til forsiden">${App.icons.back}</button>
       <main class="center">
         <div class="huge word">BOOM</div>
         <div class="big">Den, der holder bomben, drikker</div>
@@ -160,8 +161,14 @@
   App.on('bomb.again', start);
   App.on('bomb.setup', () => { stop(); B = null; App.render(); });
   App.on('bomb.swap', () => {
-    if (!B || B.phase !== 'armed') return;
-    B.prompt = newPrompt();
+    if (!B || B.phase !== 'armed' || B.swapped) return;
+    B.prompt = newPrompt(); B.swapped = true;
     App.render();
+  });
+  /* Mens bomben tikker, kræver tilbage-pilen to tryk, så den, der holder bomben, ikke bare kan stikke af */
+  let backArmed = 0;
+  App.on('bomb.back', () => {
+    if (B && B.phase === 'armed' && Date.now() - backArmed > 2500) { backArmed = Date.now(); App.toast('Tryk igen for at stoppe bomben'); return; }
+    backArmed = 0; App.go('home');
   });
 })();

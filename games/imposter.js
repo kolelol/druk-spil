@@ -47,7 +47,7 @@
       <div class="card">
         <div class="label">Sådan spiller I</div>
         <p>Alle ser det samme ord på skift. Én af jer er imposter og får ikke ordet. Sig ét ord, der passer til jeres ord, rundt om bordet. Vær ikke for tydelig, imposteren lytter med. Så stemmer I.</p>
-        <p>Rammer I imposteren, må imposteren gætte ordet: rigtigt, og alle andre drikker. Forkert, og imposteren drikker. Rammer I forkert, drikker den, I ramte, og imposteren slap.</p>
+        <p>Rammer I imposteren, må imposteren gætte ordet. Rigtigt: alle andre drikker 2. Forkert: imposteren drikker 4. Rammer I forkert, slap imposteren, og alle andre drikker 2.</p>
       </div>`,
       footer: `<button class="btn" data-action="imp.start" ${n >= 3 ? '' : 'disabled'}>Start runde</button>` });
   }
@@ -68,9 +68,9 @@
       const name = R.order[R.idx];
       /* Begge kort har samme form og farve, så ingen kan se forskel på afstand */
       const inner = name === R.imposter
-        ? `<div class="reveal-box same"><div class="label">${esc(name)}</div><div class="big accent">Du er imposter</div>
+        ? `<div class="reveal-box same"><div class="label">${esc(name)}</div><div class="big">Du er imposter</div>
             <p class="muted">Du kender ikke ordet. Lyt godt efter, og lad som om du gør.</p></div>`
-        : `<div class="reveal-box same"><div class="label">${esc(name)}, dit ord er</div><div class="big">${esc(R.word)}</div>
+        : `<div class="reveal-box same"><div class="label">${esc(name)}</div><div class="big">${esc(R.word)}</div>
             <p class="muted">Husk det, og hold det for dig selv.</p></div>`;
       const last = R.idx === R.order.length - 1;
       return ui.shell({ title: 'Imposter', color: C, center: true, backAction: 'imp.setup', body: inner,
@@ -88,8 +88,8 @@
       return ui.shell({ title: 'Imposter', color: C, backAction: 'imp.setup', body: `
         <div class="label">Afstemning</div>
         <h2>Hvem er imposteren?</h2>
-        <p class="muted">Tal sammen, peg, og tryk på navnet.</p>
-        <div class="vote-grid">${R.order.map(n => `<button class="btn ghost" data-action="imp.voteout" data-name="${esc(n)}">${esc(n)}</button>`).join('')}</div>` });
+        <p class="muted">Tal sammen, peg, og tryk på navnet. Tryk igen for at stemme ud.</p>
+        <div class="vote-grid">${R.order.map(n => `<button class="btn ${R.pick === n ? 'danger' : 'ghost'}" data-action="imp.voteout" data-name="${esc(n)}">${R.pick === n ? 'Ud med ' + esc(n) + '?' : esc(n)}</button>`).join('')}</div>` });
     },
     caught(){
       return ui.shell({ title: 'Imposter', color: C, center: true, backAction: 'imp.setup', body: `
@@ -104,7 +104,7 @@
         <p class="muted">${esc(r.text)}</p>
         <div class="reveal-box same"><div class="label">Ordet var</div><div class="big">${esc(R.word)}</div>
           <p class="muted">Imposter: <b>${esc(R.imposter)}</b></p></div>`,
-        footer: `<button class="btn" data-action="imp.start">Ny runde</button><button class="btn ghost" data-action="imp.setup">Spillere</button>` });
+        footer: `<button class="btn" data-action="imp.start">Ny runde</button><button class="btn ghost" data-action="go" data-to="players">Spillere</button>` });
     }
   };
 
@@ -118,14 +118,21 @@
     const word = App.pick(left);
     used.add(word);
     const order = App.fromHolder();
-    R = { phase: 'pass', idx: 0, order, word, imposter: App.pick(order), starter: App.pick(order), result: null };
+    R = { phase: 'pass', idx: 0, order, word, imposter: null, starter: null, result: null, pick: null };
+    R.imposter = App.pick(order);
+    R.starter = App.pick(order.filter(n => n !== R.imposter));   // imposteren starter aldrig
     App.render();
   }
   function finish(r){ R.result = r; R.phase = 'end'; App.render(); }
 
   /* ---------- knapper ---------- */
   App.on('imp.start', start);
-  App.on('imp.setup', () => { R = null; App.render(); });
+  /* Midt i en runde kræver tilbage-pilen to tryk, så et fejltryk ikke smider alles ord væk */
+  let backArmed = 0;
+  App.on('imp.setup', () => {
+    if (R && R.phase !== 'end' && Date.now() - backArmed > 2500) { backArmed = Date.now(); App.toast('Tryk igen for at afbryde runden'); return; }
+    backArmed = 0; R = null; App.render();
+  });
   App.on('imp.reveal', () => { R.phase = 'reveal'; App.render(); });
   /* Første skærm: den, der faktisk har telefonen, trykker på sig selv, og rækkefølgen starter derfra */
   App.on('imp.from', el => {
@@ -140,8 +147,9 @@
   App.on('imp.tovote', () => { R.phase = 'vote'; App.render(); });
   App.on('imp.voteout', el => {
     const name = el.dataset.name;
+    if (R.pick !== name) { R.pick = name; App.render(); return; }   // første tryk vælger, andet tryk stemmer ud
     if (name === R.imposter) { R.phase = 'caught'; App.vibrate([80, 60, 80]); App.audio.ding(); App.render(); }
-    else { App.vibrate(120); finish({ impWon: true, title: `${name} var ikke imposter`, text: `${name} drikker 2 slurke, og imposteren slap. Alle andre end imposteren drikker 2.` }); }
+    else { App.vibrate(120); finish({ impWon: true, title: `${name} var ikke imposter`, text: 'Imposteren slap. Alle andre end imposteren drikker 2 slurke.' }); }
   });
   App.on('imp.guess', el => {
     const ok = el.dataset.ok === '1';
