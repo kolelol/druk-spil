@@ -1,7 +1,8 @@
 /* Hitster: hør numre over Spotify og gæt dem. Fire spiltyper:
    Klassisk: sæt nummeret på rette plads i din tidslinje. Først til målet vinder.
    Kasser:   gæt titel, kunstner og årstal. Dommeren sætter kryds, hvert kryds er et point.
-   Klip:     hver spiller får sin egen sang og hører 0,1 sekund. Søg efter titlen. Skip eller forkert gæt skubber muren,
+   Klip:     hver spiller får sin egen sang og hører 0,1 sekund (et Deezer-preview fra omkvædet, spillet af telefonen,
+             eller hele sangen over Spotify). Søg efter titlen. Skip eller forkert gæt skubber muren,
              og sangen kører videre. Scoren er, hvor mange sekunder man hørte (som Songspot og Songless, ejeren 2026-10-16).
    Streams og Klip kan også spilles alene mod sin egen rekord.
    Streams:  højere eller lavere. Har den nye sang flere eller færre streams end den forrige?
@@ -9,7 +10,7 @@
 (() => {
   const ID = 'hitster';
   const C = '#16c46b';
-  const DEF = { mode: 'klassisk', goal: 8, from: 0, musik: 'alle', sips: 2, bonus: true, timer: 0, rounds: 3, ktimer: 0, songs: 10, lag: 0, hrounds: 5, diff: 'mellem', htimer: 0, device: null, kdiff: 'mellem', solo: 0, rec: {} };
+  const DEF = { mode: 'klassisk', goal: 8, from: 0, musik: 'alle', sips: 2, bonus: true, timer: 0, rounds: 3, ktimer: 0, songs: 10, lag: 0, hrounds: 5, diff: 'mellem', htimer: 0, device: null, kdiff: 'mellem', kstart: 'omkvaed', solo: 0, rec: {} };
   const RUN_KEY = 'drukspil.hitster.run';
   const BONUS = 2;      // slurke at dele ud for at kunne kunstner og titel (klassisk)
   const END_SIPS = 3;   // slurke: de andre drikker ved sejr i klassisk, taberen i kasser, klip og streams
@@ -18,6 +19,7 @@
   const WALLS = [0.1, 1, 5, 10, 15, 30];   // ejerens kæde (2026-10-17): hvert forkert svar rykker ét led op, efter 30 har man tabt
   const MISS = 40;          // klip: får man den ikke, tæller den som 40 sekunder
   const SOLO_SONGS = 10;    // klip alene: altid 10 sange, så rekorderne kan sammenlignes
+  const KSTART = [{ v: 'omkvaed', l: 'I omkvædet' }, { v: 'start', l: 'Fra starten' }];
   const KDIFF = [{ v: 'let', l: 'Let' }, { v: 'mellem', l: 'Mellem' }, { v: 'svaer', l: 'Svær' }, { v: 'ekspert', l: 'Ekspert' }, { v: 'umulig', l: 'Umulig' }];
   const KDIFF_TEXT = {
     let: 'De mest streamede sange. Dem kan alle.',
@@ -40,7 +42,7 @@
   const MODE_TEXT = {
     klassisk: 'Sæt nummeret på rette plads i din tidslinje. Rigtigt: du beholder kortet. Forkert: du drikker, og kortet er væk. Først til målet vinder.',
     kasser: 'Gæt titel, kunstner og årstal. Den, der holder telefonen, ser svaret og sætter kryds. Hvert kryds er et point.',
-    klip: 'Hver spiller får sin egen sang og hører 0,1 sekund. Gæt ved at søge efter titlen. Skip eller et forkert gæt skubber muren, og sangen kører videre. Din tid er, hvor meget du hørte. Laveste samlede tid vinder.',
+    klip: 'Hver spiller får sin egen sang og hører 0,1 sekund, fra omkvædet eller fra starten. Gæt ved at søge efter titlen. Skip eller et forkert gæt skubber muren, og sangen kører videre. Din tid er, hvor meget du hørte. Laveste samlede tid vinder.',
     streams: 'Højere eller lavere: har den nye sang flere eller færre streams på Spotify end den forrige? Rigtigt giver et point, forkert koster slurke. Virker også uden Spotify, bare uden musik.'
   };
 
@@ -79,7 +81,7 @@
       App.keepAwake();
       if (Spotify.loggedIn() && !Spotify.blocked()) { refreshDevices(true); }
     },
-    onLeave(){ stopTimers(); pauseQuiet(); UI.testing = ''; },
+    onLeave(){ stopTimers(); pauseQuiet(); if (player) player.pause(); UI.testing = ''; },
     render
   });
 
@@ -94,12 +96,12 @@
      I Streams er højest bedst (længste streak), i Klip er lavest bedst (kortest samlet tid). */
   const canSolo = m => m === 'streams' || m === 'klip';
   const isSolo = () => !!S.solo && canSolo(S.mode);
-  const recKey = () => S.mode === 'streams' ? ['streams', S.diff, S.musik, S.from, S.htimer].join('|') : ['klip2', S.kdiff, S.musik, S.from].join('|');   // klip2: kæden blev ændret 2026-10-17, gamle tider kan ikke sammenlignes
+  const recKey = () => S.mode === 'streams' ? ['streams', S.diff, S.musik, S.from, S.htimer].join('|') : ['klip2', S.kdiff, S.kstart, S.musik, S.from].join('|');   // klip2: kæden blev ændret 2026-10-17, gamle tider kan ikke sammenlignes
   const recNow = () => { const v = (S.rec || {})[recKey()]; return typeof v === 'number' ? v : null; };
   const MUSIK_L = { alle: 'Alt', dk: 'Kun dansk', int: 'Uden dansk' };
   const DIFF_L = { let: 'Let', mellem: 'Mellem', svaer: 'Svær' };
   const KDIFF_L = Object.fromEntries(KDIFF.map(d => [d.v, d.l]));
-  const recWhat = () => [S.mode === 'streams' ? DIFF_L[S.diff] : KDIFF_L[S.kdiff], MUSIK_L[S.musik], S.from ? S.from + '+' : 'alle år']
+  const recWhat = () => [S.mode === 'streams' ? DIFF_L[S.diff] : KDIFF_L[S.kdiff] + (S.kstart === 'start' ? ' · fra starten' : ' · omkvæd'), MUSIK_L[S.musik], S.from ? S.from + '+' : 'alle år']
     .concat(S.mode === 'streams' ? [S.htimer ? S.htimer + ' sek' : 'ingen tid'] : []).join(' · ');
   /* Streams: rekorden gemmes, så snart den er slået (scoren stiger kun). Klip: først når alle sange er spillet. */
   function saveRecord(final){
@@ -167,14 +169,25 @@
     return pool().map(c => Object.assign(c, { s: HITSTER_STREAMS.mio[c.t + '|' + c.a] || 0 })).filter(c => c.s);
   }
   const fmtS = m => m >= 1000 ? (m / 1000).toFixed(2).replace('.', ',') + ' mia.' : String(m).replace('.', ',') + ' mio.';
-  /* Streams: sværheden stiger undervejs (ejeren 2026-10-17: "et hook" i starten, sværere jo længere man kommer).
-     Vinduet er, hvor mange gange større den ene sangs tal må være end den andens: først langt fra hinanden, til sidst tæt.
-     m0 er mindste afstand i starten, M1 største afstand til sidst. Alene: fuld sværhed efter hz sange. Sammen: i sidste runde. */
-  const CURVE = { let: { hz: 16, m0: 3, M1: 1.5 }, mellem: { hz: 12, m0: 2.5, M1: 1.25 }, svaer: { hz: 8, m0: 2, M1: 1.1 } };
-  function band(){
+  /* Streams, i stil med de kendte Higher or Lower-spil (næste kort er tilfældigt, og det bliver sværere, jo længere man når):
+     - Siden (flere/færre) trækkes 50/50, så svaret aldrig kan gættes ud fra, hvor mesteren ligger. Ejeren så den gamle udgave
+       svinge forudsigeligt under/over, når en sang med 2 mia. kom (2026-10-17).
+     - Afstanden måles i pladser på listen sorteret efter streams, ikke i procent: i toppen er der langt mellem tallene og i
+       midten tæt, så pladser giver samme sværhed hele vejen. Vinduet (andel af listen) starter bredt og snævrer ind.
+     - Yderkanterne (de 3 % mest og mindst streamede) undgås som udfordrer, og første mester ligger i midterfeltet,
+       så næste runde aldrig er givet på forhånd.
+     Alene: fuld sværhed efter hz sange. Sammen: i sidste runde. */
+  const CURVE = { let: { hz: 16, w0: [0.12, 0.35], w1: [0.04, 0.14] }, mellem: { hz: 12, w0: [0.10, 0.30], w1: [0.015, 0.08] }, svaer: { hz: 8, w0: [0.08, 0.25], w1: [0.004, 0.04] } };
+  let RANK = null;   // { n, of: Map sid -> plads (0 = færrest streams) }
+  function buildRanks(){
+    const list = spool().slice().sort((a, b) => a.s - b.s);
+    RANK = { n: list.length, of: new Map(list.map((c, i) => [sid(c), i])) };
+  }
+  function win(){
     const c = CURVE[H.diff] || CURVE.mellem;
     const p = Math.min(1, H.solo ? H.turn / c.hz : (H.round - 1) / Math.max(1, H.rounds - 1));
-    return { lo: 1 + (c.m0 - 1) * Math.pow(1 - p, 1.5), hi: c.M1 * Math.pow(20 / c.M1, 1 - p) };
+    const mix = (a, b) => Math.exp(Math.log(a) + (Math.log(b) - Math.log(a)) * p);
+    return { lo: mix(c.w0[0], c.w1[0]), hi: mix(c.w0[1], c.w1[1]) };
   }
   const DIFFS = [{ v: 'let', l: 'Let' }, { v: 'mellem', l: 'Mellem' }, { v: 'svaer', l: 'Svær' }];
   const DIFF_TEXT = {
@@ -191,7 +204,7 @@
       const r = JSON.parse(localStorage.getItem(RUN_KEY));
       if (!r || !r.players || !r.phase || r.phase === 'win' || r.phase === 'end') return null;
       r.mode = r.mode || 'klassisk';   // spil gemt før der var spiltyper
-      if (r.mode === 'klip' && r.kv !== 3) return null;   // ældre Klip med point eller en anden kæde
+      if (r.mode === 'klip' && r.kv !== 4) return null;   // ældre Klip med point, en anden kæde eller uden preview
       return r;
     } catch (e) { return null; }
   }
@@ -232,23 +245,40 @@
     markSeen(c);
     return c;
   }
-  /* Streams: næste udfordrer. Kurven (band) bestemmer, hvor langt dens tal skal ligge fra sangen, der skal slås.
-     Vågne sange først. To sange med samme tal giver intet rigtigt svar, så dem vælger vi aldrig. */
+  /* Streams: første sang at slå ligger i midterfeltet, så første svar ikke er givet */
+  function pickChamp(){
+    if (!RANK) buildRanks();
+    const N = RANK.n, edge = Math.max(2, Math.round(N * 0.1));
+    for (let i = H.deck.length - 1; i >= 0; i--) {
+      const r = RANK.of.get(sid(H.deck[i]));
+      if (r !== undefined && r >= edge && r < N - edge) { const c = H.deck.splice(i, 1)[0]; markSeen(c); return c; }
+    }
+    return draw();
+  }
+  /* Streams: næste udfordrer (se CURVE ovenfor). Vågne sange først. Samme tal som mesteren vælges aldrig. */
   function drawChallenger(){
-    const { lo, hi } = band();
-    if (H.deck.length < 25) {   // hold bunken fyldt, så der altid er sange i vinduet
+    if (!RANK) buildRanks();
+    if (H.deck.length < 25) {   // hold bunken fyldt
       const skip = new Set([H.champ, H.cur].filter(Boolean).map(sid));
       H.deck = freshDeck(spool().filter(c => !skip.has(sid(c))));
     }
-    const ratio = c => Math.max(c.s, H.champ.s) / Math.min(c.s, H.champ.s);
-    const ok = H.deck.filter(c => c.s !== H.champ.s);
+    const { lo, hi } = win(), N = RANK.n, r0 = RANK.of.get(sid(H.champ)) || 0;
+    const ok = H.deck.filter(c => c.s !== H.champ.s && RANK.of.has(sid(c)));
     const awake = ok.filter(isAwake);
-    const from = awake.length >= 3 ? awake : ok;
-    let near = from.filter(c => { const r = ratio(c); return r >= lo && r <= hi; });
-    if (near.length < 3) {   // ingen i vinduet: tag de tre, der ligger nærmest midten af det
-      const mid = Math.log(Math.sqrt(lo * hi));
-      near = from.slice().sort((x, y) => Math.abs(Math.log(ratio(x)) - mid) - Math.abs(Math.log(ratio(y)) - mid)).slice(0, 3);
+    const pool = awake.length >= 6 ? awake : ok;
+    const edge = Math.max(2, Math.round(N * 0.03));
+    const inner = pool.filter(c => { const r = RANK.of.get(sid(c)); return r >= edge && r < N - edge; });
+    const from = inner.length >= 6 ? inner : pool;
+    const dist = c => RANK.of.get(sid(c)) - r0;
+    const inWin = c => { const d = Math.abs(dist(c)); return d >= lo * N && d <= hi * N; };
+    const side = Math.random() < 0.5 ? 1 : -1;
+    let near = from.filter(c => Math.sign(dist(c)) === side && inWin(c));
+    if (near.length < 3) {   // for få på den side inden for vinduet: de nærmeste på samme side
+      const same = from.filter(c => Math.sign(dist(c)) === side);
+      if (same.length) near = same.sort((x, y) => Math.abs(Math.abs(dist(x)) - lo * N) - Math.abs(Math.abs(dist(y)) - lo * N)).slice(0, 3);
     }
+    if (near.length < 3) near = from.filter(c => Math.sign(dist(c)) === -side && inWin(c));   // intet på den side: den anden
+    if (near.length < 3 && from.length) near = from.slice().sort((x, y) => Math.abs(Math.abs(dist(x)) - lo * N) - Math.abs(Math.abs(dist(y)) - lo * N)).slice(0, 3);
     if (!near.length) return draw();
     const c = App.pick(near);
     H.deck.splice(H.deck.indexOf(c), 1);
@@ -288,11 +318,70 @@
      ikke have "10 minutes of silence" i sin Spotify (2026-10-17). Forsvinder enheden, finder playOnDevice den igen. */
   let cur = null;   // det nummer, der spiller lige nu: { uri, at (Date.now ved start), offset (ms) }
   function hush(){
+    if (player) player.pause();
     if (!played || !S || !Spotify.loggedIn()) return;
     played = false;
     if (cur) cur.paused = Date.now();
     Spotify.pause(dev()).catch(() => {});
   }
+  /* Preview (Klip, "I omkvædet"): 30 sekunders klip fra Deezer, der starter i omkvædet, spillet af telefonen selv.
+     Ejeren (2026-10-17): "i stedet for at sangen starter fra start og det lange omkvæd kommer". Virker uden Spotify og
+     rammer 0,1 sekund præcist. Deezers API svarer uden CORS, så vi bruger JSONP. Linkene udløber efter nogle timer,
+     så vi gemmer Deezers nummer-id og henter linket igen. */
+  const PREV_KEY = 'drukspil.deezer.preview';
+  let prevCache = {};
+  try { prevCache = JSON.parse(localStorage.getItem(PREV_KEY)) || {}; } catch (e) {}
+  let player = null;   // ét <audio>-element: iOS låser det op ved første tryk, og så kan vi spille videre på det uden tryk
+  function audioEl(){
+    if (!player) { player = new Audio(); player.preload = 'auto'; }
+    return player;
+  }
+  function jsonp(url){
+    return new Promise(resolve => {
+      const cb = 'dz' + Date.now() + Math.floor(Math.random() * 1e6);
+      const el = document.createElement('script');
+      let t = null;
+      const done = v => { delete window[cb]; el.remove(); clearTimeout(t); resolve(v); };
+      window[cb] = done;
+      t = setTimeout(() => done(null), 8000);
+      el.onerror = () => done(null);
+      el.src = url + (url.includes('?') ? '&' : '?') + 'output=jsonp&callback=' + cb;
+      document.head.appendChild(el);
+    });
+  }
+  const PBAD = /\b(live|remix|karaoke|instrumental|akustisk|acoustic|sped up|slowed|demo)\b/i;
+  const pbase = t => t.replace(/\s*[\(\[].*$/, '').replace(/\s+-\s.*$/, '').trim() || t;
+  async function findPreview(c){
+    const k = sid(c), hit = prevCache[k];
+    if (hit && hit.url && Date.now() - hit.at < 3 * 3600e3) return hit.url;
+    if (hit && hit.none && Date.now() - hit.none < 7 * 86400e3) return null;
+    let id = hit && hit.id, url = null;
+    if (id) { const t = await jsonp('https://api.deezer.com/track/' + id); url = (t && t.preview) || null; }
+    if (!url) {
+      const j = await jsonp('https://api.deezer.com/search?q=' + encodeURIComponent(c.a + ' ' + c.t) + '&limit=15');
+      const rows = ((j && j.data) || []).filter(x => x.preview && norm(pbase(x.title)) === norm(pbase(c.t)));
+      const first = norm(c.a).split(' ')[0];
+      const best = rows.find(x => !PBAD.test(x.title) && norm(x.artist.name).includes(first)) || rows.find(x => !PBAD.test(x.title)) || rows[0];
+      if (best) { id = best.id; url = best.preview; }
+    }
+    prevCache[k] = url ? { id, url, at: Date.now() } : { none: Date.now() };
+    try { localStorage.setItem(PREV_KEY, JSON.stringify(prevCache)); } catch (e) {}
+    return url;
+  }
+  const usePreview = () => !!H && H.mode === 'klip' && H.kstart === 'omkvaed';
+  /* Hent previewet til den aktuelle sang og læg det i afspilleren, så første tryk spiller med det samme.
+     Har Deezer ikke sangen, tages den næste i bunken. */
+  async function prepPreview(){
+    for (let i = 0; i < 5 && H && H.phase === 'clip' && usePreview() && !H.pv; i++) {
+      const song = H.cur;
+      const url = await findPreview(song);
+      if (!H || H.phase !== 'clip' || H.cur !== song) return;
+      if (url) { H.pv = url; const a = audioEl(); if (a.src !== url) { a.src = url; a.load(); } saveRun(); paintClip(); return; }
+      H.cur = draw(); H.track = null; saveRun();
+    }
+    if (H && H.phase === 'clip' && usePreview() && !H.pv) { UI.msg = 'Fandt ingen preview. Prøv Skip, eller vælg "Fra starten" i indstillingerne.'; App.render(); }
+  }
+
   /* Afspil på den valgte enhed. Er enheden forsvundet (appen blev lukket), finder vi den igen. */
   async function playOnDevice(uri, positionMs){
     played = true;
@@ -314,6 +403,11 @@
     await playOnDevice(H.track.uri, pos);
   }
   async function togglePause(){
+    if (usePreview()) {
+      const a = audioEl(); UI.msg = '';
+      if (H.paused) { H.paused = false; a.play().catch(() => {}); } else { H.paused = true; a.pause(); }
+      App.render(); return;
+    }
     if (!H || !H.track) return;
     UI.msg = '';
     if (H.paused) {
@@ -451,7 +545,8 @@
     const n = solo ? 1 : p.length;
     const src = deckSrc(S.mode);
     const enough = src.length >= n + 10;
-    const ready = n >= (solo ? 1 : 2) && enough && (S.mode === 'streams' || (Spotify.loggedIn() && !!S.device));
+    const preview = S.mode === 'klip' && S.kstart === 'omkvaed';
+    const ready = n >= (solo ? 1 : 2) && enough && (S.mode === 'streams' || preview || (Spotify.loggedIn() && !!S.device));
     const few = enough ? '' : `<p class="warn">${S.mode === 'streams'
       ? 'Der er kun streams-tal for ' + src.length + ' af de valgte numre. Vælg mere musik eller en anden spiltype.'
       : 'For få numre med de valg. Vælg mere musik eller flere år.'}</p>`;
@@ -475,12 +570,14 @@
            <p class="hint">${DIFF_TEXT[S.diff]}</p></div>`
         + `<div class="field"><div class="label">Tid til at svare</div>${ui.seg('hit.seg', [{ v: 0, l: 'Ingen' }, { v: 5, l: '5 sek' }, { v: 10, l: '10 sek' }], S.htimer, 'htimer')}</div>`;
     } else {
-      rules = `<div class="field"><div class="label">Sværhed</div>${ui.seg('hit.seg', KDIFF, S.kdiff, 'kdiff')}
+      rules = `<div class="field"><div class="label">Klippet starter</div>${ui.seg('hit.seg', KSTART, S.kstart, 'kstart')}
+           <p class="hint">${preview ? 'Et 30 sekunders preview fra Deezer, der starter i omkvædet. Telefonen spiller det selv, så det virker uden Spotify og rammer 0,1 sekund præcist.' : 'Hele sangen fra begyndelsen over Spotify. Kræver Spotify Premium og en enhed, og Spotify er lidt langsom til at stoppe.'}</p></div>`
+        + `<div class="field"><div class="label">Sværhed</div>${ui.seg('hit.seg', KDIFF, S.kdiff, 'kdiff')}
            <p class="hint">${KDIFF_TEXT[S.kdiff]}</p></div>`
         + (solo ? '' : ui.stepper('Runder', 'hit.step', S.rounds, 'rounds', 'Hver spiller får ' + S.rounds + (S.rounds === 1 ? ' sang' : ' sange'))
         + ui.stepper('Slurke, hvis man ikke gætter den', 'hit.step', S.sips, 'sips'))
-        + ui.stepper('Justér klip (ms)', 'hit.step', S.lag, 'lag', 'Hører I for lidt eller for meget af 0,1 sekund, så ret her. Spotify er lidt langsom, så prøv minus.')
-        + `<div class="btn-row" style="margin:6px 0 4px"><button class="btn sm light" data-action="hit.testclip" ${UI.busy || !S.device ? 'disabled' : ''}>Test 0,1 sekund</button></div>`;
+        + (preview ? '' : ui.stepper('Justér klip (ms)', 'hit.step', S.lag, 'lag', 'Hører I for lidt eller for meget af 0,1 sekund, så ret her. Spotify er lidt langsom, så prøv minus.')
+        + `<div class="btn-row" style="margin:6px 0 4px"><button class="btn sm light" data-action="hit.testclip" ${UI.busy || !S.device ? 'disabled' : ''}>Test 0,1 sekund</button></div>`);
     }
     return ui.shell({ title: 'Hitster', color: C, body: `
       ${resume}
@@ -489,7 +586,7 @@
         <p class="hint">${MODE_TEXT[S.mode]}</p>
         ${canSolo(S.mode) ? `<div style="margin-top:12px">${ui.seg('hit.seg', [{ v: 0, l: 'Sammen' }, { v: 1, l: 'Alene' }], solo ? 1 : 0, 'solo')}</div>` : ''}
       </div>
-      ${spotifyCard()}
+      ${preview ? '<div class="card"><div class="label">Spotify</div><p>Klip med preview bruger ikke Spotify. Lyden kommer fra telefonen (eller den højttaler, telefonen er koblet til).</p></div>' : spotifyCard()}
       ${solo ? soloCard() : `<div class="card">
         <div class="row-between">
           <div><div class="label">Spillere</div><div class="strong">${p.length ? esc(p.join(', ')) : 'Ingen endnu'}</div></div>
@@ -613,7 +710,7 @@
   function renderClip(){
     const name = who(), st = H.stage, wall = WALLS[st];
     const marks = WALLS.slice(0, -1).map(t => `<i style="left:${cpos(t)}%"></i>`).join('');
-    const cs = H.cstate === 'playing' || H.cstate === 'loading' ? H.cstate : '';
+    const cs = H.cstate === 'playing' || H.cstate === 'loading' ? H.cstate : usePreview() && !H.pv ? 'loading' : '';
     const top = H.solo ? `Sang ${H.round} af ${H.rounds}` + (H.best !== null ? ' · rekord ' + fmtSec(H.best) : '')
       : `${esc(App.gen(name))} tur · sang ${H.round} af ${H.rounds}`;
     return ui.shell({ title: 'Hitster', color: C, center: true, backAction: 'hit.setup', body: `
@@ -796,14 +893,14 @@
     H = {
       mode: S.mode, phase: 'turn', players: p.slice(), idx: 0, round: 1, turn: 0, song: 1,
       goal: S.goal, sips: solo ? 0 : S.sips, bonus: S.bonus, rounds: solo ? (S.mode === 'klip' ? SOLO_SONGS : 0) : S.mode === 'streams' ? S.hrounds : S.rounds,
-      solo, key: solo ? recKey() : '', best: solo ? recNow() : null, what: solo ? recWhat() : '', newRec: false, kv: 3, heard: 0,
+      solo, key: solo ? recKey() : '', best: solo ? recNow() : null, what: solo ? recWhat() : '', newRec: false, kv: 4, heard: 0, kstart: S.mode === 'klip' ? S.kstart : '', pv: null,
       timer: S.mode === 'kasser' ? S.ktimer : S.mode === 'klassisk' ? S.timer : S.mode === 'streams' ? S.htimer : 0,
       diff: S.diff, tl: {}, score: {}, deck: freshDeck(src), cur: null, champ: null, track: null, res: null, last: null,
       slot: null, marks: [false, false, false], stage: 0, cstate: 'idle', wrong: [], q: '', paused: false, deadline: 0, timeUp: false
     };
     p.forEach(n => { H.score[n] = 0; });
     if (H.mode === 'klassisk') p.forEach(n => { H.tl[n] = [draw()]; });
-    if (H.mode === 'streams') { H.champ = draw(); H.cur = drawChallenger(); H.phase = 'hl'; }
+    if (H.mode === 'streams') { buildRanks(); H.champ = pickChamp(); H.cur = drawChallenger(); H.phase = 'hl'; }
     else H.cur = draw();
     if (H.mode === 'klip') H.phase = 'clip';
     UI.msg = ''; UI.busy = '';
@@ -811,6 +908,7 @@
     if (H.mode === 'streams') startTimer();
     App.render();
     if (H.mode === 'streams') playChallenger();
+    if (usePreview()) prepPreview();
   }
 
   /* Klassisk og kasser: find nummeret, spil det og gå videre til gættefasen */
@@ -831,11 +929,34 @@
 
   /* Klip: spil fra "from" sekunder op til muren. 0 er fra starten; ellers kører sangen videre, hvor den slap. */
   let clipT0 = 0, clipP0 = 0, raf = 0;
-  const clipPos = () => Math.min(WALLS[H.stage], clipP0 + (performance.now() - clipT0) / 1000);
+  const clipPos = () => Math.min(WALLS[H.stage], usePreview() ? audioEl().currentTime : clipP0 + (performance.now() - clipT0) / 1000);
   async function playClip(from){
     if (!H || H.phase !== 'clip' || H.cstate === 'playing' || H.cstate === 'loading') return;
     const song = H.cur;
-    UI.msg = ''; H.cstate = 'loading'; paintClip();
+    UI.msg = '';
+    if (usePreview()) {
+      const a = audioEl();
+      try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch (e) {}
+      if (!H.pv) {
+        H.cstate = 'loading'; paintClip();
+        await prepPreview();
+        if (!H || H.phase !== 'clip' || H.cur !== song) return;
+        if (!H.pv) { H.cstate = 'idle'; paintClip(); return; }
+      }
+      if (a.src !== H.pv) a.src = H.pv;
+      H.cstate = 'loading'; paintClip();
+      try {
+        a.currentTime = from || 0;
+        await a.play();
+        if (!H || H.phase !== 'clip' || H.cur !== song || H.cstate !== 'loading') { a.pause(); return; }
+        H.cstate = 'playing'; clipP0 = a.currentTime; clipT0 = performance.now();
+        armStop(); paintClip(); loop();
+      } catch (e) {
+        if (H) { H.cstate = 'idle'; UI.msg = 'Tryk på knappen igen for at spille.'; App.render(); }
+      }
+      return;
+    }
+    H.cstate = 'loading'; paintClip();
     try {
       await ensureTrack();
       await playOnDevice(H.track.uri, Math.round((from || 0) * 1000));
@@ -850,18 +971,20 @@
   /* Stop ved muren. Skubbes muren, mens sangen spiller, flyttes kun stoppet, og sangen kører bare videre. */
   function armStop(){
     clearTimeout(clipTimer);
-    const at = clipT0 + (WALLS[H.stage] - clipP0) * 1000 + S.lag;
+    const pv = usePreview();
+    const left = pv ? (WALLS[H.stage] - audioEl().currentTime) * 1000 : clipT0 + (WALLS[H.stage] - clipP0) * 1000 + S.lag - performance.now();
     clipTimer = setTimeout(() => {
       clipTimer = null;
       if (!H || H.cstate !== 'playing') return;
       H.heard = Math.max(H.heard || 0, WALLS[H.stage]);
-      hush(); H.cstate = 'idle'; saveRun(); paintClip();
-    }, Math.max(40, at - performance.now()));
+      if (pv) audioEl().pause(); else hush();
+      H.cstate = 'idle'; saveRun(); paintClip();
+    }, Math.max(pv ? 10 : 40, left));
   }
   function stopClip(){
     clearTimeout(clipTimer); clipTimer = null;
     cancelAnimationFrame(raf); raf = 0;
-    if (H && H.cstate === 'playing') { H.heard = Math.max(H.heard || 0, clipPos()); hush(); }
+    if (H && H.cstate === 'playing') { H.heard = Math.max(H.heard || 0, clipPos()); if (usePreview()) audioEl().pause(); else hush(); }
     if (H) H.cstate = 'idle';
   }
   /* Bjælken og ringen følger sangen, mens den spiller */
@@ -883,6 +1006,7 @@
     if (!b || !H) return;
     b.classList.remove('loading', 'playing');
     if (H.cstate === 'loading' || H.cstate === 'playing') b.classList.add(H.cstate);
+    else if (usePreview() && !H.pv) b.classList.add('loading');
     b.setAttribute('aria-label', H.cstate === 'idle' ? 'Spil fra starten' : 'Stop');
     if (H.cstate !== 'playing') {
       const run = document.querySelector('.crun'), ring = document.querySelector('.cplay .ring circle');
@@ -963,7 +1087,7 @@
     S[k] = Math.min(lim[1], Math.max(lim[0], S[k] + d * lim[2]));
     App.save(); App.render();
   });
-  App.on('hit.seg', el => { const k = el.dataset.key; S[k] = k === 'mode' || k === 'musik' || k === 'diff' || k === 'kdiff' ? el.dataset.v : Number(el.dataset.v); App.save(); App.render(); });
+  App.on('hit.seg', el => { const k = el.dataset.key; S[k] = k === 'mode' || k === 'musik' || k === 'diff' || k === 'kdiff' || k === 'kstart' ? el.dataset.v : Number(el.dataset.v); App.save(); App.render(); });
   App.on('hit.toggle', el => { S[el.dataset.key] = el.checked; App.save(); App.render(); });
 
   App.on('hit.start', start);
@@ -971,6 +1095,8 @@
     H = SAVED; SAVED = null; UI.msg = ''; UI.busy = '';
     H.paused = false;
     if (H.cstate === 'playing' || H.cstate === 'loading') H.cstate = 'idle';
+    if (H.mode === 'streams') buildRanks();
+    if (H.mode === 'klip') { H.pv = null; if (usePreview()) prepPreview(); }
     if (H.phase === 'place' || H.phase === 'judge' || (H.phase === 'hl' && !H.res)) runTimer();
     App.render();
   });
@@ -982,6 +1108,7 @@
     App.audio.click(); saveRun(); App.render();
   });
   App.on('hit.replay', async () => {
+    if (usePreview()) { const a = audioEl(); if (H.pv) { if (a.src !== H.pv) a.src = H.pv; a.currentTime = 0; H.paused = false; a.play().catch(() => {}); App.render(); } return; }
     if (!H || !H.track) return;
     UI.msg = ''; H.paused = false; App.render();
     try { await playOnDevice(H.track.uri); } catch (e) { UI.msg = Spotify.explain(e); App.render(); }
@@ -1050,9 +1177,10 @@
     const taken = new Set([H.cur, H.champ].filter(Boolean).map(sid));
     H.deck = freshDeck(balance(deckSrc(H.mode)).filter(c => !taken.has(sid(c))));
     const swap = H.mode === 'klip' && H.phase === 'clip' && H.cstate === 'idle' && !H.heard && !H.wrong.length;
-    if (swap) { H.cur = draw(); H.track = null; H.q = ''; }
+    if (swap) { H.cur = draw(); H.track = null; H.q = ''; H.pv = null; }
     App.toast(swap ? 'Sværhed: ' + name : 'Sværhed: ' + name + ' fra næste sang');
     saveRun(); App.render();
+    if (swap && usePreview()) prepPreview();
   });
   /* Klip: den store knap spiller fra starten op til muren, eller stopper, hvis den spiller */
   App.on('hit.cplay', () => {
@@ -1094,6 +1222,7 @@
     H.res = { ok, t, stage: H.stage, card: H.cur, img: H.track ? H.track.img : '' };
     H.phase = 'reveal'; H.paused = false; H.q = '';
     saveRun(); App.render();
+    if (usePreview()) { if (!wasPlaying && H.pv) { const a = audioEl(); if (a.src !== H.pv) a.src = H.pv; a.play().catch(() => {}); } return; }   // previewet kører videre
     if (wasPlaying) return;   // sangen spiller allerede, den kører bare videre
     (H.track ? Promise.resolve() : ensureTrack()).then(() => {
       if (!H || H.phase !== 'reveal' || !H.track) return;
@@ -1112,9 +1241,10 @@
       if (H.turn >= H.players.length * H.rounds) { endRun(); return; }
       H.idx = H.turn % H.players.length;
       H.round = Math.floor(H.turn / H.players.length) + 1;
-      H.cur = draw(); H.track = null; H.res = null; H.stage = 0; H.cstate = 'idle'; H.wrong = []; H.q = ''; H.heard = 0; H.paused = false;
+      H.cur = draw(); H.track = null; H.res = null; H.stage = 0; H.cstate = 'idle'; H.wrong = []; H.q = ''; H.heard = 0; H.paused = false; H.pv = null;
       H.phase = 'clip'; UI.msg = '';
       saveRun(); App.render();
+      if (usePreview()) prepPreview();
       return;
     }
     if (H.res.won) {
