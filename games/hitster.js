@@ -1,7 +1,8 @@
 /* Hitster: hør numre over Spotify og gæt dem. Fire spiltyper:
    Klassisk: sæt nummeret på rette plads i din tidslinje. Først til målet vinder.
    Kasser:   gæt titel, kunstner og årstal. Dommeren sætter kryds, hvert kryds er et point.
-   Klip:     hør 1, 5, 15 og 30 sekunder. Jo hurtigere nogen gætter, jo flere point.
+   Klip:     hver spiller får sin egen sang. Hør et halvt sekund, og søg efter titlen. Skip eller forkert gæt giver mere
+             af sangen, men den er mindre værd (som Songspot og Songless, som ejeren pegede på 2026-10-16).
    Streams:  højere eller lavere. Har den nye sang flere eller færre streams end den forrige?
    Musikken afspilles af Spotify på en enhed, appen styrer (se spotify.js). */
 (() => {
@@ -11,8 +12,8 @@
   const RUN_KEY = 'drukspil.hitster.run';
   const BONUS = 2;      // slurke at dele ud for at kunne kunstner og titel (klassisk)
   const END_SIPS = 3;   // slurke: de andre drikker ved sejr i klassisk, taberen i kasser, klip og streams
-  const STAGES = [1, 5, 15, 30];     // klip: sekunder man hører
-  const STAGE_PTS = [4, 3, 2, 1];    // klip: point for at gætte efter hvert trin
+  const CLIPS = [0.5, 1, 2, 5, 10, 20];          // klip: sekunder man hører på hvert trin
+  const WORTH = [1000, 800, 600, 400, 250, 100];  // klip: point for at gætte på hvert trin
   const { esc, ui } = App;
   let S = null;         // gemte indstillinger
   let H = null;         // igangværende spil
@@ -27,7 +28,7 @@
   const MODE_TEXT = {
     klassisk: 'Sæt nummeret på rette plads i din tidslinje. Rigtigt: du beholder kortet. Forkert: du drikker, og kortet er væk. Først til målet vinder.',
     kasser: 'Gæt titel, kunstner og årstal. Den, der holder telefonen, ser svaret og sætter kryds. Hvert kryds er et point.',
-    klip: 'Hør 1, 5, 15 og 30 sekunder af sangen. Jo hurtigere I gætter den, jo flere point: 4, 3, 2 eller 1.',
+    klip: 'Hver spiller får sin egen sang. Start med et halvt sekund, og gæt ved at søge efter titlen. Skip eller et forkert gæt giver mere af sangen, men den er mindre værd: 1.000, 800, 600, 400, 250 og 100 point.',
     streams: 'Højere eller lavere: har den nye sang flere eller færre streams på Spotify end den forrige? Rigtigt giver et point, forkert koster slurke. Virker også uden Spotify, bare uden musik.'
   };
 
@@ -50,6 +51,11 @@
   const UP = arrow('M32 52V14M15 30l17-17 17 17');
   const DOWN = arrow('M32 12v38M15 34l17 17 17-17');
   const eq = cls => `<div class="eq ${cls || ''}" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>`;
+  /* Klip: afspil, stop og ringen, der løber rundt, mens klippet spiller */
+  const PLAY = '<svg class="ic play" viewBox="0 0 64 64" aria-hidden="true"><path d="M22 14l30 18-30 18z" fill="#fff" stroke="#0d1b3e" stroke-width="5" stroke-linejoin="round"/></svg>';
+  const STOP = '<svg class="ic stop" viewBox="0 0 64 64" aria-hidden="true"><rect x="17" y="17" width="30" height="30" rx="5" fill="#fff" stroke="#0d1b3e" stroke-width="5"/></svg>';
+  const RING = '<svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="46" pathLength="100"/></svg>';
+  const LUPE = '<svg class="lupe" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.5"/><path d="M15.5 15.5L21 21" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>';
 
   App.register({
     id: ID, navn: 'Hitster', farve: C, ikon: IKON,
@@ -67,6 +73,36 @@
   /* ---------- hjælpere ---------- */
   const sl = n => n === 1 ? '1 slurk' : n + ' slurke';
   const pt = n => n === 1 ? '1 point' : n + ' point';
+  const fmtP = n => Number(n).toLocaleString('da-DK');        // 1.000
+  const fmtSec = s => String(s).replace('.', ',') + ' s';      // 0,5 s
+  /* Klip: søgning i alle numre (ikke kun dem i bunken, så listen ikke afslører noget) */
+  const norm = s => String(s).toLowerCase().replace(/['’`´]/g, '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9æøå]+/g, ' ').trim();
+  let INDEX = null;
+  function songIndex(){
+    if (INDEX) return INDEX;
+    const seen = new Set();
+    INDEX = HITSTER_SONGS.concat(HITSTER_SONGS_DK).filter(s => { const k = s[0] + '|' + s[1]; if (seen.has(k)) return false; seen.add(k); return true; })
+      .map(s => ({ t: s[0], a: s[1], nt: norm(s[0]), na: norm(s[1]) }));
+    return INDEX;
+  }
+  function search(q){
+    const n = norm(q);
+    if (n.length < 2) return [];
+    const words = n.split(' ');
+    const hits = [];
+    for (const s of songIndex()) {
+      const hay = s.nt + ' ' + s.na;
+      if (!words.every(w => hay.includes(w))) continue;
+      hits.push([s.nt.startsWith(n) ? 0 : s.nt.includes(n) ? 1 : (' ' + s.nt).includes(' ' + words[0]) ? 2 : 3, s]);
+    }
+    return hits.sort((x, y) => x[0] - y[0] || x[1].t.length - y[1].t.length).slice(0, 5).map(h => h[1]);
+  }
+  const results = q => {
+    if (norm(q).length < 2) return '';
+    const r = search(q);
+    return r.length ? r.map(s => `<button type="button" class="sr" data-action="hit.pick" data-t="${esc(s.t)}"><b>${esc(s.t)}</b><small>${esc(s.a)}</small></button>`).join('')
+      : '<p class="sr-none">Ingen sange fundet. Prøv med titlen.</p>';
+  };
   const who = () => H.players[H.idx];
   const judge = () => H.players[(H.idx + 1) % H.players.length];
   const nextName = () => H.players[(H.idx + 1) % H.players.length];
@@ -96,6 +132,7 @@
       const r = JSON.parse(localStorage.getItem(RUN_KEY));
       if (!r || !r.players || !r.phase || r.phase === 'win' || r.phase === 'end') return null;
       r.mode = r.mode || 'klassisk';   // spil gemt før der var spiltyper
+      if (r.mode === 'klip' && !Array.isArray(r.wrong)) return null;   // den gamle Klip med 1, 5, 15 og 30 sek
       return r;
     } catch (e) { return null; }
   }
@@ -273,7 +310,7 @@
   /* ---------- skærme ---------- */
   function render(){
     if (!H) return renderSetup();
-    return ({ turn: renderTurn, place: renderPlace, judge: renderJudge, clip: renderClip, who: renderWho, hl: renderHL, reveal: renderReveal, win: renderWin, end: renderEnd })[H.phase]();
+    return ({ turn: renderTurn, place: renderPlace, judge: renderJudge, clip: renderClip, hl: renderHL, reveal: renderReveal, win: renderWin, end: renderEnd })[H.phase]();
   }
 
   const DEV_TYPE = { Smartphone: 'Telefon', Computer: 'Computer', Speaker: 'Højttaler', TV: 'TV', CastAudio: 'Cast', CastVideo: 'Cast' };
@@ -320,8 +357,7 @@
   }
 
   function resumeText(r){
-    if (r.mode === 'klip') return `Sang ${r.song} af ${r.songs}.`;
-    if (r.mode === 'kasser' || r.mode === 'streams') return `${App.gen(r.players[r.idx])} tur, runde ${r.round} af ${r.rounds}.`;
+    if (r.mode === 'kasser' || r.mode === 'streams' || r.mode === 'klip') return `${App.gen(r.players[r.idx])} tur, runde ${r.round} af ${r.rounds}.`;
     return `${App.gen(r.players[r.idx])} tur i runde ${r.round}.`;
   }
 
@@ -354,9 +390,10 @@
            <p class="hint">${DIFF_TEXT[S.diff]}</p></div>`
         + `<div class="field"><div class="label">Tid til at svare</div>${ui.seg('hit.seg', [{ v: 0, l: 'Ingen' }, { v: 5, l: '5 sek' }, { v: 10, l: '10 sek' }], S.htimer, 'htimer')}</div>`;
     } else {
-      rules = ui.stepper('Antal sange', 'hit.step', S.songs, 'songs')
-        + ui.stepper('Justér klip (ms)', 'hit.step', S.lag, 'lag', 'Hører I for lidt eller for meget af 1 sek, så ret her')
-        + `<div class="btn-row" style="margin:6px 0 4px"><button class="btn sm light" data-action="hit.testclip" ${UI.busy || !S.device ? 'disabled' : ''}>Test 1 sek klip</button></div>`;
+      rules = ui.stepper('Runder', 'hit.step', S.rounds, 'rounds', 'Hver spiller får ' + S.rounds + (S.rounds === 1 ? ' sang' : ' sange'))
+        + ui.stepper('Slurke, hvis man ikke gætter den', 'hit.step', S.sips, 'sips')
+        + ui.stepper('Justér klip (ms)', 'hit.step', S.lag, 'lag', 'Hører I for lidt eller for meget af et halvt sekund, så ret her')
+        + `<div class="btn-row" style="margin:6px 0 4px"><button class="btn sm light" data-action="hit.testclip" ${UI.busy || !S.device ? 'disabled' : ''}>Test et halvt sekund</button></div>`;
     }
     return ui.shell({ title: 'Hitster', color: C, body: `
       ${resume}
@@ -401,8 +438,8 @@
     return `<div class="tl">${h}</div>`;
   }
   function scoreboard(){
-    const val = n => H.mode === 'klassisk' ? H.tl[n].length : H.score[n];
-    const cur = H.mode === 'klip' ? -1 : H.idx;
+    const val = n => H.mode === 'klassisk' ? H.tl[n].length : fmtP(H.score[n]);
+    const cur = H.idx;
     return `<div class="chips" style="justify-content:center">${H.players.map((n, i) => `<span class="chip ${i === cur ? 'on' : ''}">${esc(n)} <b>${val(n)}</b></span>`).join('')}</div>`;
   }
   const controls = () => `<div class="btn-row"><button class="btn sm ghost" data-action="hit.replay">Hør igen</button><button class="btn sm ghost" data-action="hit.pause">${H.paused ? 'Afspil' : 'Pause'}</button></div>`;
@@ -461,26 +498,35 @@
       footer: `<button class="btn" data-action="hit.award">${n ? 'Giv ' + pt(n) : 'Ingen point'}</button>` });
   }
 
-  /* Klip: hør 1, 5, 15 og 30 sekunder */
+  /* Klip: stor afspilknap, bjælke med det, man har låst op, og søgning efter sangen nederst.
+     Mens et klip spiller, tegnes kun knappen og bjælken om (paintClip), så tastaturet ikke lukker midt i en søgning. */
+  const cpos = t => Math.sqrt(t / CLIPS[CLIPS.length - 1]) * 100;   // kvadratrod, så de korte klip kan ses på bjælken
   function renderClip(){
-    const st = H.stage, cs = H.cstate;
-    const pills = STAGES.map((s, i) => `<span class="stage ${i === st ? 'on' : i < st ? 'past' : ''}">${s} sek<b>${STAGE_PTS[i]} p</b></span>`).join('');
-    const mid = cs === 'playing' ? eq('') : `<div class="big">${cs === 'done' ? 'Kender I den?' : STAGES[st] + ' sek'}</div>`;
-    let foot;
-    if (cs === 'playing') foot = '<button class="btn" disabled>Lytter...</button>';
-    else if (cs === 'idle') foot = `<button class="btn" data-action="hit.clip">Spil klippet (${STAGES[st]} sek)</button>`;
-    else foot = `<button class="btn light" data-action="hit.guess">Nogen gættede</button>
-      <button class="btn ghost" data-action="hit.more">${st < 3 ? 'Næste trin: ' + STAGES[st + 1] + ' sek' : 'Ingen gættede'}</button>
-      <button class="link" data-action="hit.clip">Hør klippet igen</button>`;
+    const name = who(), st = H.stage, len = CLIPS[st], lastStage = st === CLIPS.length - 1;
+    const marks = CLIPS.slice(0, -1).map(t => `<i style="left:${cpos(t)}%"></i>`).join('');
+    const cs = H.cstate === 'playing' || H.cstate === 'loading' ? H.cstate : '';
     return ui.shell({ title: 'Hitster', color: C, center: true, backAction: 'hit.setup', body: `
-      <div class="label">Sang ${H.song} af ${H.songs}</div>
-      <div class="stages">${pills}</div>
-      ${mid}
-      <p class="muted">Sig titel eller kunstner. Den, der holder telefonen, afgør, om det er rigtigt.</p>
-      ${H.peek ? `<div class="card" style="width:100%"><div class="strong">${esc(H.cur.t)}</div><p>${esc(H.cur.a)}, ${H.cur.y}</p></div>` : ''}
-      <button class="link" data-action="hit.peek">${H.peek ? 'Skjul svaret' : 'Vis svaret (kun til den, der holder telefonen)'}</button>
-      ${scoreboard()}${msg()}`, footer: foot });
+      <div class="label">${esc(App.gen(name))} tur · sang ${H.round} af ${H.rounds}</div>
+      <div class="worth"><small>Værd nu</small><b>${fmtP(WORTH[st])}</b></div>
+      <div class="cbar-wrap">
+        <div class="cbar ${cs === 'playing' ? 'run' : ''}" style="--to:${cpos(len)}%;--dur:${len}s">${marks}<span class="cfill"></span><span class="crun"></span></div>
+        <span class="cnow" style="left:${cpos(len)}%">${fmtSec(len)}</span><span class="cend">${fmtSec(CLIPS[CLIPS.length - 1])}</span>
+      </div>
+      <div class="cplay-row">
+        <button class="cplay ${cs}" style="--dur:${len}s" data-action="hit.cplay" aria-label="Spil klippet">${PLAY}${STOP}${RING}</button>
+        <span class="clen">${fmtSec(len)}</span>
+      </div>
+      ${H.wrong.length ? `<div class="cwrong">${H.wrong.map(t => `<span>${esc(t)}</span>`).join('')}</div>` : `<p class="muted">Kun ${esc(name)} gætter. Resten holder kæft.</p>`}
+      ${msg()}`,
+      footer: `<div class="csearch">
+        <div class="sr-list">${results(H.q || '')}</div>
+        <form class="input-row" data-form="hit.searchgo" autocomplete="off">
+          <label class="csq">${LUPE}<input id="clip-q" data-input="hit.search" value="${esc(H.q || '')}" placeholder="Gæt sangen" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"></label>
+          <button type="button" class="btn sm ghost cskip" data-action="hit.skip">${lastStage ? 'Giv op' : 'Skip<small>' + fmtSec(CLIPS[st + 1]) + '</small>'}</button>
+        </form>
+      </div>` });
   }
+
 
   /* Streams: den forrige sang med tal øverst, udfordreren nederst. Efter gættet vises tallet på samme skærm. */
   function renderHL(){
@@ -510,23 +556,16 @@
       footer: `<button class="btn" data-action="hit.hlnext">${last ? 'Se resultatet' : 'Giv videre til ' + esc(nextName())}</button>` });
   }
 
-  function renderWho(){
-    return ui.shell({ title: 'Hitster', color: C, backAction: 'hit.setup', body: `
-      <div class="label">Gættet efter ${STAGES[H.stage]} sek</div>
-      <h2>Hvem gættede?</h2>
-      <p class="muted">Giver ${pt(STAGE_PTS[H.stage])}.</p>
-      <div class="vote-grid">${H.players.map(n => `<button class="btn ghost" data-action="hit.who" data-name="${esc(n)}">${esc(n)}</button>`).join('')}</div>`,
-      footer: `<button class="link" data-action="hit.back">Tilbage</button>` });
-  }
-
   function renderReveal(){
     const r = H.res, c = r.card;
     if (H.mode === 'klip') {
-      const text = r.name ? `${r.name} gættede efter ${STAGES[r.stage]} sek og får ${pt(r.pts)}.` : 'Ingen gættede den.';
-      const last = H.song >= H.songs;
+      const name = who();
+      const text = r.ok ? `${name} tog den på ${fmtSec(CLIPS[r.stage])} og får ${fmtP(r.pts)} point.`
+        : `${name} kunne ikke tage den.` + (H.sips ? ` ${name} drikker ${sl(H.sips)}.` : '');
+      const last = H.turn + 1 >= H.players.length * H.rounds;
       return ui.shell({ title: 'Hitster', color: C, center: true, backAction: 'hit.setup', body: `
-        <div class="reveal-box" style="--accent:${r.name ? '#2fae57' : '#e0453a'}">
-          <div class="label">Sang ${H.song} af ${H.songs}</div>
+        <div class="reveal-box" style="--accent:${r.ok ? '#2fae57' : '#e0453a'}">
+          <div class="label">${r.ok ? '+' + fmtP(r.pts) + ' point' : 'Ikke gættet'}</div>
           ${r.img ? `<img class="cover" src="${esc(r.img)}" alt="">` : ''}
           <div class="big accent">${c.y}</div>
           <div class="strong">${esc(c.t)}</div>
@@ -534,7 +573,7 @@
         </div>
         <p class="strong">${esc(text)}</p>
         ${scoreboard()}${controls()}${msg()}`,
-        footer: `<button class="btn" data-action="hit.next">${last ? 'Se resultatet' : 'Næste sang'}</button>` });
+        footer: `<button class="btn" data-action="hit.next">${last ? 'Se resultatet' : 'Giv videre til ' + esc(nextName())}</button>` });
     }
     const name = who(), n = H.tl[name].length;
     const lost = (r.timeout ? 'Tiden løb ud. ' : '') + (H.sips ? `${name} drikker ${sl(H.sips)}. Kortet er væk.` : 'Kortet er væk.');
@@ -579,7 +618,7 @@
       ${winners.length === 1 ? ui.avatar(winners[0], true) : ''}
       <div class="big ${winners.length > 2 ? 'long' : ''}">${tie ? 'Uafgjort' : esc(list(winners, ' og ')) + (winners.length === 1 ? ' vinder' : ' deler sejren')}</div>
       ${tie ? '' : `<p class="muted">${esc(list(losers, ' og '))} ${losers.length === 1 ? 'drikker' : 'drikker hver'} ${sl(END_SIPS)}.</p>`}
-      <div class="players" style="width:100%">${rank.map(n => `<div class="player-row">${ui.avatar(n)}<span class="name">${esc(n)}</span><b class="pts">${H.score[n]}</b></div>`).join('')}</div>`,
+      <div class="players" style="width:100%">${rank.map(n => `<div class="player-row">${ui.avatar(n)}<span class="name">${esc(n)}</span><b class="pts">${fmtP(H.score[n])}</b></div>`).join('')}</div>`,
       footer: `<button class="btn" data-action="hit.start">Nyt spil</button><button class="btn ghost" data-action="hit.setup">Indstillinger</button>` });
   }
 
@@ -591,10 +630,10 @@
     clearRun(); stopTimers(); hush();
     H = {
       mode: S.mode, phase: 'turn', players: p.slice(), idx: 0, round: 1, turn: 0, song: 1,
-      goal: S.goal, sips: S.sips, bonus: S.bonus, rounds: S.mode === 'streams' ? S.hrounds : S.rounds, songs: S.songs,
+      goal: S.goal, sips: S.sips, bonus: S.bonus, rounds: S.mode === 'streams' ? S.hrounds : S.rounds,
       timer: S.mode === 'kasser' ? S.ktimer : S.mode === 'klassisk' ? S.timer : S.mode === 'streams' ? S.htimer : 0,
       diff: S.diff, tl: {}, score: {}, deck: App.shuffle(src), cur: null, champ: null, track: null, res: null, last: null,
-      slot: null, marks: [false, false, false], stage: 0, cstate: 'idle', peek: false, paused: false, deadline: 0, timeUp: false
+      slot: null, marks: [false, false, false], stage: 0, cstate: 'idle', wrong: [], q: '', paused: false, deadline: 0, timeUp: false
     };
     p.forEach(n => { H.score[n] = 0; });
     if (H.mode === 'klassisk') p.forEach(n => { H.tl[n] = [draw()]; });
@@ -624,25 +663,42 @@
     App.render();
   }
 
-  /* Klip: spil nummeret i den længde, trinnet tillader, og stop så */
+  /* Klip: spil nummeret fra starten i den længde, trinnet tillader, og stop så */
   async function playClip(){
-    if (!H || H.cstate === 'playing') return;
-    const prev = H.cstate;
-    UI.msg = ''; H.cstate = 'playing'; App.render();
+    if (!H || H.phase !== 'clip' || H.cstate === 'playing' || H.cstate === 'loading') return;
+    const song = H.cur;
+    UI.msg = ''; H.cstate = 'loading'; paintClip();
     try {
       await ensureTrack();
-      await playOnDevice(H.track.uri);
-      if (!H) return;
+      await playOnDevice(H.track.uri, 0);
+      if (!H || H.phase !== 'clip' || H.cur !== song || H.cstate !== 'loading') return;
+      const len = CLIPS[H.stage];
+      H.cstate = 'playing'; paintClip();
       clearTimeout(clipTimer);
       clipTimer = setTimeout(() => {
         clipTimer = null;
-        if (!H) return;
-        played = true; hush();
-        H.cstate = 'done'; saveRun(); App.render();
-      }, Math.max(200, STAGES[H.stage] * 1000 + S.lag));
+        if (!H || H.cstate !== 'playing') return;
+        hush(); H.cstate = 'idle'; paintClip();
+      }, Math.max(200, len * 1000 + S.lag));
     } catch (e) {
-      if (H) { H.cstate = prev; UI.msg = Spotify.explain(e); App.render(); }
+      if (H) { H.cstate = 'idle'; UI.msg = Spotify.explain(e); App.render(); }
     }
+  }
+  function stopClip(){
+    clearTimeout(clipTimer); clipTimer = null;
+    if (H && H.cstate === 'playing') hush();
+    if (H) H.cstate = 'idle';
+  }
+  /* Tegn kun knappen og bjælken om. Klassen sættes på igen, så ringen og bjælken starter forfra. */
+  function paintClip(){
+    const b = document.querySelector('.cplay'), bar = document.querySelector('.cbar');
+    if (!b || !H) return;
+    b.classList.remove('loading', 'playing');
+    if (bar) bar.classList.remove('run');
+    void b.offsetWidth;
+    if (H.cstate === 'loading' || H.cstate === 'playing') b.classList.add(H.cstate);
+    if (H.cstate === 'playing' && bar) bar.classList.add('run');
+    b.setAttribute('aria-label', H.cstate === 'idle' ? 'Spil klippet' : 'Stop');
   }
 
   /* Klassisk: lås svaret. Ved timeout tæller det valgte felt, og er intet valgt, er svaret forkert. */
@@ -693,7 +749,7 @@
       for (let i = 0; i < 5 && !tr; i++) tr = await Spotify.findTrack(App.pick(pool()));
       if (!tr) throw new Error('Fandt ingen numre på Spotify.');
       await playOnDevice(tr.uri);
-      setTimeout(() => { played = true; hush(); }, Math.max(200, 1000 + S.lag));
+      setTimeout(() => { played = true; hush(); }, Math.max(200, CLIPS[0] * 1000 + S.lag));
     } catch (e) { UI.msg = Spotify.explain(e); }
     UI.busy = '';
     App.render();
@@ -713,7 +769,7 @@
   App.on('hit.resume', () => {
     H = SAVED; SAVED = null; UI.msg = ''; UI.busy = '';
     H.paused = false;
-    if (H.cstate === 'playing') H.cstate = 'idle';
+    if (H.cstate === 'playing' || H.cstate === 'loading') H.cstate = 'idle';
     if (H.phase === 'place' || H.phase === 'judge' || (H.phase === 'hl' && !H.res)) runTimer();
     App.render();
   });
@@ -780,31 +836,66 @@
     playChallenger();
   });
 
-  App.on('hit.clip', playClip);
-  App.on('hit.peek', () => { H.peek = !H.peek; App.render(); });
-  App.on('hit.guess', () => { H.phase = 'who'; saveRun(); App.render(); });
-  App.on('hit.back', () => { H.phase = 'clip'; saveRun(); App.render(); });
-  App.on('hit.more', () => {
-    if (H.stage < STAGES.length - 1) { H.stage++; H.cstate = 'idle'; saveRun(); App.render(); return; }
-    revealClip(null);
+  /* Klip: den store knap spiller klippet, eller stopper det, hvis det spiller */
+  App.on('hit.cplay', () => {
+    if (!H || H.phase !== 'clip') return;
+    if (H.cstate === 'playing' || H.cstate === 'loading') { stopClip(); paintClip(); return; }
+    playClip();
   });
-  App.on('hit.who', el => revealClip(el.dataset.name));
-  /* Klip: giv point og vis svaret, og spil hele nummeret */
-  function revealClip(name){
-    const pts = name ? STAGE_PTS[H.stage] : 0;
-    if (name) { H.score[name] += pts; App.audio.ding(); App.vibrate(80); } else { App.audio.buzz(); }
-    H.res = { name, pts, stage: H.stage, card: H.cur, img: H.track ? H.track.img : '' };
-    H.phase = 'reveal'; H.paused = false;
-    saveRun(); App.render();
-    if (H.track) playOnDevice(H.track.uri).catch(e => { UI.msg = Spotify.explain(e); App.render(); });
+  /* Søgning: kun listen tegnes om, så tastaturet bliver oppe */
+  App.on('hit.search', el => {
+    if (!H || H.phase !== 'clip') return;
+    H.q = el.value;
+    const box = document.querySelector('.sr-list');
+    if (box) box.innerHTML = results(H.q);
+  });
+  App.on('hit.searchgo', f => { const i = f.querySelector('input'); if (i) i.blur(); });
+  /* Et gæt: rigtigt er samme titel (et cover med samme titel tæller også). Forkert giver næste klip med det samme. */
+  App.on('hit.pick', el => {
+    if (!H || H.phase !== 'clip') return;
+    const t = el.dataset.t;
+    if (norm(t) === norm(H.cur.t)) { revealClip(true); return; }
+    if (!H.wrong.includes(t)) H.wrong.push(t);
+    App.audio.buzz(); App.vibrate([120, 60, 120]);
+    App.toast('Forkert: ' + t);
+    nextStage();
+  });
+  App.on('hit.skip', () => { if (H && H.phase === 'clip') nextStage(); });
+  /* Mere af sangen, men den er mindre værd. Efter sidste trin er det slut. */
+  function nextStage(){
+    stopClip();
+    if (H.stage >= CLIPS.length - 1) { revealClip(false); return; }
+    H.stage++; H.q = '';
+    saveRun(); App.render(true);
+    playClip();
   }
+  /* Klip: giv point og vis svaret, og spil hele nummeret */
+  function revealClip(ok){
+    stopClip();
+    const pts = ok ? WORTH[H.stage] : 0;
+    H.score[who()] += pts;
+    if (ok) { App.audio.ding(); App.vibrate([80, 40, 80]); } else { App.audio.buzz(); App.vibrate([120, 60, 120]); }
+    H.res = { ok, pts, stage: H.stage, card: H.cur, img: H.track ? H.track.img : '' };
+    H.phase = 'reveal'; H.paused = false; H.q = '';
+    saveRun(); App.render();
+    const go = () => H && H.phase === 'reveal' && H.track && playOnDevice(H.track.uri);
+    (H.track ? Promise.resolve() : ensureTrack()).then(() => {
+      if (H && H.res && !H.res.img && H.track) { H.res.img = H.track.img; saveRun(); App.render(); }
+      return go();
+    }).catch(e => { UI.msg = Spotify.explain(e); App.render(); });
+  }
+  /* Tryk i resultatlisten må ikke tage fokus fra søgefeltet først (så flytter listen sig, før trykket lander) */
+  document.addEventListener('mousedown', e => { if (e.target.closest && e.target.closest('.sr')) e.preventDefault(); });
 
   App.on('hit.next', () => {
     if (!H || H.phase !== 'reveal') return;
     stopTimers(); hush();
     if (H.mode === 'klip') {
-      if (H.song >= H.songs) { H.phase = 'end'; clearRun(); App.audio.ding(); App.render(); return; }
-      H.song++; H.cur = draw(); H.track = null; H.res = null; H.stage = 0; H.cstate = 'idle'; H.peek = false; H.paused = false;
+      H.turn++;
+      if (H.turn >= H.players.length * H.rounds) { H.phase = 'end'; clearRun(); App.audio.ding(); App.render(); return; }
+      H.idx = H.turn % H.players.length;
+      H.round = Math.floor(H.turn / H.players.length) + 1;
+      H.cur = draw(); H.track = null; H.res = null; H.stage = 0; H.cstate = 'idle'; H.wrong = []; H.q = ''; H.paused = false;
       H.phase = 'clip'; UI.msg = '';
       saveRun(); App.render();
       return;

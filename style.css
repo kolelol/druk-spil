@@ -303,11 +303,55 @@ input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 
 .kasse.on { background: linear-gradient(#efffd9, #b9f18c); }
 .kasse.on .k-c { background: linear-gradient(#a6f06a, #3faa22); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .5); }
 .kasse.on .k-c svg { opacity: 1; transform: none; }
-.stages { display: flex; gap: 6px; justify-content: center; width: 100%; }
-.stage { flex: 1; max-width: 86px; padding: 7px 4px 6px; border-radius: 12px; border: 2px solid var(--ink); background: linear-gradient(var(--inset), var(--inset2)); box-shadow: inset 0 2px 5px rgba(0, 0, 0, .5); font: 400 15px/1.1 var(--display); color: #9fb8e6; text-shadow: 0 1px 0 rgba(0, 0, 0, .5); text-align: center; }
-.stage b { display: block; margin-top: 2px; font-size: 12px; font-weight: 400; }
-.stage.on { background: linear-gradient(#ffe36b, #ffc531 50%, #f6a41a); color: #fff; text-shadow: var(--o-xs); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .5), inset 0 -3px 0 #a5620a, 0 3px 0 var(--ink); }
-.stage.past { opacity: .45; }
+/* Klip (Hitster): "værd nu", bjælke med det, man har låst op, stor rund afspilknap og søgning. Efter Songspot og Songless. */
+.worth { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.worth small { font: 400 13px/1 var(--display); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); text-shadow: var(--o-xs); }
+.worth b { font: 400 clamp(58px, 19vw, 86px)/.95 var(--display); letter-spacing: 1px; color: var(--gold); text-shadow: var(--o-l), 0 6px 18px rgba(0, 0, 0, .35); }
+#app.anim .worth b { animation: pop .38s cubic-bezier(.2, 1.4, .4, 1) both; }
+.cbar-wrap { position: relative; width: 100%; padding-bottom: 22px; }
+.cbar { position: relative; height: 24px; border-radius: 12px; border: 2.5px solid var(--ink); background: linear-gradient(var(--inset), var(--inset2)); box-shadow: inset 0 3px 6px rgba(0, 0, 0, .5), 0 2px 0 rgba(255, 255, 255, .12); overflow: hidden; }
+.cbar i { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: rgba(255, 255, 255, .16); z-index: 2; }
+.cfill { position: absolute; left: 0; top: 0; bottom: 0; width: var(--to); background: linear-gradient(#7fe0a6, #2f9c63); opacity: .55; transition: width .35s cubic-bezier(.2, 1.2, .4, 1); }
+.crun { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: linear-gradient(#c9ff9b, #6be08f 45%, var(--accent)); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .5), 4px 0 10px rgba(201, 255, 155, .6); z-index: 1; }
+.cbar.run .crun { animation: crun var(--dur) linear forwards; }
+@keyframes crun { from { width: 0; } to { width: var(--to); } }
+.cnow { position: absolute; top: 30px; transform: translateX(-50%); font: 400 13px/1 var(--display); color: #b5f77a; text-shadow: var(--o-xs); white-space: nowrap; }
+.cnow::before { content: ""; position: absolute; left: 50%; top: -7px; margin-left: -5px; border: 5px solid transparent; border-top: 0; border-bottom: 6px solid #b5f77a; }
+.cend { position: absolute; right: 0; top: 30px; font: 400 13px/1 var(--display); color: var(--muted); text-shadow: var(--o-xs); }
+.cplay-row { position: relative; width: 100%; display: grid; place-items: center; padding: 14px 0 10px; }
+.cplay-row::before { content: ""; position: absolute; left: 50%; top: 50%; width: 230px; height: 230px; margin: -115px 0 0 -115px; border-radius: 50%; background: radial-gradient(rgba(22, 196, 107, .38), rgba(22, 196, 107, 0) 65%); animation: glow 1.8s ease-in-out infinite alternate; pointer-events: none; }
+@keyframes glow { from { transform: scale(.85); opacity: .6; } to { transform: scale(1.05); opacity: 1; } }
+.cplay { position: relative; width: 148px; height: 148px; border-radius: 50%; border: 3px solid var(--ink); display: grid; place-items: center; background: radial-gradient(circle at 50% 30%, #c9ff9b, #4fd884 38%, var(--accent) 62%, #0e8a4a); box-shadow: inset 0 3px 0 rgba(255, 255, 255, .55), inset 0 -8px 0 #0b6b39, 0 6px 0 var(--ink), 0 14px 24px rgba(0, 0, 0, .4); transition: transform .06s, box-shadow .06s; }
+.cplay:active { transform: translateY(5px); box-shadow: inset 0 3px 0 rgba(255, 255, 255, .55), inset 0 -4px 0 #0b6b39, 0 1px 0 var(--ink), 0 4px 10px rgba(0, 0, 0, .35); }
+.cplay .ic { width: 64px; height: 64px; filter: drop-shadow(0 3px 0 rgba(13, 27, 62, .35)); }
+.cplay .play { margin-left: 8px; }
+.cplay .stop, .cplay.playing .play, .cplay.loading .play { display: none; }
+.cplay.playing .stop { display: block; }
+.cplay.loading::after { content: ""; width: 54px; height: 54px; border-radius: 50%; border: 7px solid rgba(255, 255, 255, .35); border-top-color: #fff; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.cplay .ring { position: absolute; left: -14px; top: -14px; width: calc(100% + 28px); height: calc(100% + 28px); transform: rotate(-90deg); pointer-events: none; overflow: visible; }
+.cplay .ring circle { fill: none; stroke: var(--gold); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; opacity: 0; filter: drop-shadow(0 0 4px rgba(255, 210, 63, .8)); }
+.cplay.playing .ring circle { opacity: 1; animation: ring var(--dur) linear forwards; }
+@keyframes ring { to { stroke-dashoffset: 0; } }
+.clen { position: absolute; left: calc(50% + 96px); top: 50%; transform: translateY(-50%); font: 400 26px/1 var(--display); color: #b5f77a; text-shadow: var(--o-s); }
+.cwrong { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; width: 100%; }
+.cwrong span { max-width: 100%; padding: 6px 11px 5px; border-radius: 999px; border: 2px solid var(--ink); background: linear-gradient(#ff8a7a, var(--danger)); color: #fff; font: 400 14px/1.1 var(--display); text-shadow: var(--o-xs); text-decoration: line-through; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 2px 0 var(--ink); }
+.csearch { position: relative; width: 100%; }
+.csearch .input-row { align-items: stretch; }
+.csq { position: relative; flex: 1; min-width: 0; display: flex; }
+.csq input { flex: 1; min-width: 0; min-height: 54px; padding-left: 44px; border-radius: 14px; border: 2.5px solid var(--ink); background: linear-gradient(var(--inset), var(--inset2)); color: #fff; font: 600 17px var(--sans); box-shadow: inset 0 3px 6px rgba(0, 0, 0, .45); outline: none; }
+.csq input::placeholder { color: #8ea9dd; font-weight: 500; }
+.csq input:focus { border-color: var(--gold); }
+.csq .lupe { position: absolute; left: 14px; top: 50%; width: 21px; height: 21px; margin-top: -10.5px; color: #8ea9dd; pointer-events: none; }
+.footer .btn.cskip { width: auto; min-height: 54px; flex-direction: column; gap: 1px; padding: 0 16px; line-height: 1; }
+.cskip small { font-size: 12px; opacity: .9; }
+.sr-list { position: absolute; left: 0; right: 0; bottom: calc(100% + 10px); display: flex; flex-direction: column; gap: 7px; z-index: 6; }
+.sr-list:empty { display: none; }
+.sr { width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 10px 14px 11px; border-radius: 14px; border: 2.5px solid var(--ink); background: linear-gradient(#fffaf0, #f4e4c1); color: var(--cream-ink); box-shadow: 0 3px 0 var(--ink), 0 8px 16px rgba(0, 0, 0, .35); transition: transform .06s, box-shadow .06s; }
+.sr:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.sr b { font: 400 19px/1.15 var(--display); letter-spacing: .2px; }
+.sr small { font-size: 13px; color: var(--cream-muted); }
+.sr-none { margin: 0; padding: 10px 14px; border-radius: 14px; border: 2.5px solid var(--ink); background: rgba(var(--bar), .92); color: var(--muted); font-size: 15px; text-align: center; }
 .hl-card { width: 100%; padding: 12px 16px 13px; border-radius: 18px; border: 3px solid var(--ink); background: linear-gradient(#fffaf0, #f4e4c1); color: var(--cream-ink); display: flex; flex-direction: column; align-items: center; gap: 3px; box-shadow: inset 0 0 0 4px var(--accent), 0 4px 0 var(--ink), 0 10px 16px rgba(0, 0, 0, .3); }
 .hl-t { font: 400 clamp(20px, 6.2vw, 27px)/1.1 var(--display); overflow-wrap: anywhere; }
 .hl-a { font: 600 14px/1.25 var(--sans); color: var(--cream-muted); }
