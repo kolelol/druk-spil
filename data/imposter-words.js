@@ -54,7 +54,7 @@ const IMPOSTER_WORDS = [
     'Boksning', 'Ski', 'Bordtennis', 'Formel 1', 'Padel',
     'MMA', 'Darts', 'Billard', 'Bowling', 'Crossfit', 'Bænkpres',
     'Beachvolley', 'Champions League', 'Premier League', 'Målmand', 'Rødt kort', 'Offside',
-    'Hattrick', 'Ølbong', 'Beerpong', 'Armlægning', 'Bordfodbold'
+    'Hattrick', 'Beerpong', 'Armlægning', 'Bordfodbold'
   ]},
   { id: 'film', navn: 'Film og serier', ord: [
     'Star Wars', 'Harry Potter', 'Løvernes Konge', 'The Office', 'Titanic', 'Jurassic Park', 'Batman',

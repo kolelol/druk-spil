@@ -9,8 +9,7 @@
 const BOMBE_CATEGORIES = [
   { tema: 'Byen og druk', ord: [
     'Ølmærker', 'Shots', 'Spiritus',
-    'Natmad',
-    'Ting man mister i byen'
+    'Natmad'
   ]},
   { tema: 'Mad og drikke', ord: [
     'Drikkevarer', 'Morgenmad', 'Frugter', 'Grøntsager', 'Noget på en pizza',
@@ -49,7 +48,7 @@ const BOMBE_CATEGORIES = [
 ];
 
 const BOMBE_CATEGORIES_ADULT = [
-  'Sexstillinger', 'Kaldenavne for penis', 'Ord for at have sex',
+  'Kaldenavne for penis', 'Ord for at have sex',
   'Pornokategorier'
 
 ];

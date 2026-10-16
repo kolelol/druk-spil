@@ -38,7 +38,7 @@ const SPYGAME_WORDS = [
     'Mette Frederiksen', 'Kong Frederik', 'Dronning Mary', 'Casper Christensen',
     'Frank Hvam', 'Anders Matthesen', 'Mick Øgendahl', 'Sofie Linde', 'Mads Mikkelsen',
     'Lukas Graham', 'Gilli', 'Kesi', 'Tobias Rahim',
-    'Rasmus Seebach', 'Jonas Vingegaard',
+    'Jonas Vingegaard',
     'Caroline Wozniacki', 'Christian Eriksen',
     'Nicklas Bendtner'
   ]},
