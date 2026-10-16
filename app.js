@@ -225,7 +225,7 @@ const App = (() => {
 
   function renderPlayers(){
     const list = store.players.map((p, i) => `<div class="player-row">${avatar(p)}<span class="name">${esc(p)}</span><button class="x" data-action="players.remove" data-i="${i}" aria-label="Fjern ${esc(p)}">${icons.x}</button></div>`).join('');
-    return shell({ title: 'Spillere', body: `
+    return shell({ title: 'Spillere', back: playersBack, body: `
       <form class="input-row" data-form="players.add" autocomplete="off">
         <input id="player-input" maxlength="16" placeholder="Skriv et navn" autocomplete="off" autocapitalize="words" enterkeyhint="done">
         <button class="btn sm" type="submit">Tilføj</button>
@@ -236,7 +236,7 @@ const App = (() => {
         <button class="btn sm ghost" style="align-self:center" data-action="seats.open">Sæt pladser</button></div>` : ''}
       <div class="players">${list || '<p class="muted">Ingen spillere endnu. Imposter kræver mindst 3.</p>'}</div>
       ${store.players.length ? '<button class="link" data-action="players.clear">Fjern alle</button>' : ''}`,
-      footer: `<button class="btn" data-action="go" data-to="home">Færdig</button>` });
+      footer: `<button class="btn" data-action="go" data-to="${playersBack}">Færdig</button>` });
   }
 
   let seatDraft = [], seatBack = 'players';
@@ -264,10 +264,27 @@ const App = (() => {
     else { const g = game(screen); html = g ? g.render() : renderHome(); }
     root.innerHTML = html;
     root.classList.toggle('anim', anim === true || pendingAnim);
+    /* Lange enkeltord i den store skrift gøres mindre, så de ikke deles midt i ordet på små telefoner */
+    root.querySelectorAll('.big').forEach(b => {
+      const len = Math.max(...b.textContent.trim().split(/\s+/).map(t => t.length));
+      if (len >= 10) { b.classList.add('fitw'); b.style.setProperty('--len', len); }
+    });
+    /* Skifter skærmens hovedknap (fx "Vis mit ord" til "Skjul og giv videre", der sidder samme sted), så ignoreres tryk
+       et øjeblik. Ellers kan et fuldt dobbelttryk vise og skjule et ord, før man når at se det, eller vise næste spillers ord. */
+    const k = root.querySelector('.footer .btn, .screen[data-action], .vote-grid');
+    const key = screen + ':' + (k ? (k.dataset.action || k.className) : '');
+    /* Kun inde i samme spil (eller på eksplosionen, hvor hele skærmen er en knap), ikke ved åbning eller på forsiden */
+    if (key !== lastKey) {
+      if (screen === lastScreen || (k && k.matches('.screen[data-action]'))) guardUntil = performance.now() + 500;
+      lastKey = key; lastScreen = screen;
+    }
   }
+  let lastKey = '', lastScreen = '', guardUntil = 0;
 
   /* ---------- kernens knapper ---------- */
-  on('go', el => go(el.dataset.to));
+  /* Spillerskærmen husker, hvor man kom fra, så Færdig og Tilbage fører tilbage til spillet */
+  let playersBack = 'home';
+  on('go', el => { if (el.dataset.to === 'players' && screen !== 'players' && screen !== 'seats') playersBack = screen; go(el.dataset.to); });
   on('set', el => { store.settings[el.dataset.key] = el.checked; if (el.dataset.key === 'sound' && el.checked) ac(); save(); });
   on('players.add', form => {
     const input = form.querySelector('input');
@@ -293,6 +310,7 @@ const App = (() => {
     root.addEventListener('click', e => {
       const el = e.target.closest('[data-action]');
       if (!el || el.disabled) return;
+      if (performance.now() < guardUntil) { e.preventDefault(); return; }   // dobbelttryk lige efter skærmskift
       ac();
       const fn = ACTIONS[el.dataset.action];
       if (!fn) return;

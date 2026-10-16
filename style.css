@@ -106,6 +106,9 @@ main.center p { font-size: 17px; max-width: 34ch; }
 .big { font: 400 clamp(38px, 12.5vw, 64px)/1.05 var(--display); letter-spacing: .3px; text-shadow: var(--o-l); overflow-wrap: anywhere; }
 .big.accent { color: color-mix(in srgb, var(--accent), #fff 35%); }
 .big.long { font-size: clamp(26px, 7.6vw, 40px); line-height: 1.15; text-shadow: var(--o-s); max-width: 22ch; }
+/* Længste ord skal kunne stå på én linje: skriften skrumper efter antal bogstaver (--len sættes i App.render) */
+.big.fitw { font-size: min(clamp(38px, 12.5vw, 64px), calc((min(100vw, 560px) - 96px) / (var(--len) * 0.56))); }
+.big.long.fitw { font-size: min(clamp(26px, 7.6vw, 40px), calc((min(100vw, 560px) - 96px) / (var(--len) * 0.56))); }
 .huge { font: 400 clamp(96px, 34vw, 190px)/1 var(--display); letter-spacing: 1px; text-shadow: var(--o-l); }
 .huge.word { font-size: clamp(64px, 22vw, 140px); }
 .label { font: 400 13px/1.2 var(--display); text-transform: uppercase; letter-spacing: .12em; color: var(--gold); text-shadow: var(--o-xs); }

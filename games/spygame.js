@@ -87,7 +87,7 @@
       const inner = isSpy
         ? `<div class="reveal-box same"><div class="label">${esc(name)}</div><div class="big accent">Du er spionen</div>
             <p class="muted">Kategori: <b>${esc(R.cat)}</b></p>
-            <p class="muted">Du kender ikke ordet. Spørg og svar, som om du gør. Ordlisten står på næste skærm.</p></div>`
+            <p class="muted">Du kender ikke ordet. Spørg og svar, som om du gør. Når alle har set deres rolle, kan du se ordlisten.</p></div>`
         : `<div class="reveal-box same"><div class="label">${esc(name)}, dit ord er</div><div class="big">${esc(R.word)}</div>
             <p class="muted">Kategori: <b>${esc(R.cat)}</b></p>
             <p class="muted">Hold det for dig selv. Svar, så det passer, men ikke for tydeligt.</p></div>`;
