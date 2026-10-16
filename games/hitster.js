@@ -1,7 +1,7 @@
 /* Hitster: hør numre over Spotify og gæt dem. Fire spiltyper:
    Klassisk: sæt nummeret på rette plads i din tidslinje. Først til målet vinder.
    Kasser:   gæt titel, kunstner og årstal. Dommeren sætter kryds, hvert kryds er et point.
-   Klip:     hver spiller får sin egen sang og hører et halvt sekund. Søg efter titlen. Skip eller forkert gæt skubber muren,
+   Klip:     hver spiller får sin egen sang og hører 0,1 sekund. Søg efter titlen. Skip eller forkert gæt skubber muren,
              og sangen kører videre. Scoren er, hvor mange sekunder man hørte (som Songspot og Songless, ejeren 2026-10-16).
    Streams og Klip kan også spilles alene mod sin egen rekord.
    Streams:  højere eller lavere. Har den nye sang flere eller færre streams end den forrige?
@@ -15,7 +15,7 @@
   const END_SIPS = 3;   // slurke: de andre drikker ved sejr i klassisk, taberen i kasser, klip og streams
   /* Klip: muren. Man hører sangen fra starten op til muren. Skip eller et forkert gæt skubber den et trin ud, og sangen
      kører videre derfra i stedet for at starte forfra. Scoren er, hvor langt muren stod, da man gættede den. */
-  const WALLS = [0.5, 1, 1.5, 2, 3, 4, 5, 7, 10, 15, 20, 30];
+  const WALLS = [0.1, 1, 5, 10, 15, 30];   // ejerens kæde (2026-10-17): hvert forkert svar rykker ét led op, efter 30 har man tabt
   const MISS = 40;          // klip: får man den ikke, tæller den som 40 sekunder
   const SOLO_SONGS = 10;    // klip alene: altid 10 sange, så rekorderne kan sammenlignes
   const KDIFF = [{ v: 'let', l: 'Let' }, { v: 'mellem', l: 'Mellem' }, { v: 'svaer', l: 'Svær' }, { v: 'ekspert', l: 'Ekspert' }, { v: 'umulig', l: 'Umulig' }];
@@ -40,7 +40,7 @@
   const MODE_TEXT = {
     klassisk: 'Sæt nummeret på rette plads i din tidslinje. Rigtigt: du beholder kortet. Forkert: du drikker, og kortet er væk. Først til målet vinder.',
     kasser: 'Gæt titel, kunstner og årstal. Den, der holder telefonen, ser svaret og sætter kryds. Hvert kryds er et point.',
-    klip: 'Hver spiller får sin egen sang og hører et halvt sekund. Gæt ved at søge efter titlen. Skip eller et forkert gæt skubber muren, og sangen kører videre. Din tid er, hvor meget du hørte. Laveste samlede tid vinder.',
+    klip: 'Hver spiller får sin egen sang og hører 0,1 sekund. Gæt ved at søge efter titlen. Skip eller et forkert gæt skubber muren, og sangen kører videre. Din tid er, hvor meget du hørte. Laveste samlede tid vinder.',
     streams: 'Højere eller lavere: har den nye sang flere eller færre streams på Spotify end den forrige? Rigtigt giver et point, forkert koster slurke. Virker også uden Spotify, bare uden musik.'
   };
 
@@ -75,6 +75,7 @@
     onEnter(){
       S = App.gameSettings(ID, DEF); H = null; SAVED = loadRun(); UI.msg = ''; UI.busy = '';
       if ('dk' in S) { if (S.dk === false) S.musik = 'int'; delete S.dk; App.save(); }   // gammel indstilling "Med dansk musik"
+      if (S.rec) Object.keys(S.rec).filter(k => k.startsWith('klip|')).forEach(k => { delete S.rec[k]; App.save(); });   // rekorder fra den gamle kæde
       App.keepAwake();
       if (Spotify.loggedIn() && !Spotify.blocked()) { refreshDevices(true); Spotify.silence().catch(() => {}); }   // find det stille nummer, så første pause ikke skal vente
     },
@@ -93,7 +94,7 @@
      I Streams er højest bedst (længste streak), i Klip er lavest bedst (kortest samlet tid). */
   const canSolo = m => m === 'streams' || m === 'klip';
   const isSolo = () => !!S.solo && canSolo(S.mode);
-  const recKey = () => S.mode === 'streams' ? ['streams', S.diff, S.musik, S.from, S.htimer].join('|') : ['klip', S.kdiff, S.musik, S.from].join('|');
+  const recKey = () => S.mode === 'streams' ? ['streams', S.diff, S.musik, S.from, S.htimer].join('|') : ['klip2', S.kdiff, S.musik, S.from].join('|');   // klip2: kæden blev ændret 2026-10-17, gamle tider kan ikke sammenlignes
   const recNow = () => { const v = (S.rec || {})[recKey()]; return typeof v === 'number' ? v : null; };
   const MUSIK_L = { alle: 'Alt', dk: 'Kun dansk', int: 'Uden dansk' };
   const DIFF_L = { let: 'Let', mellem: 'Mellem', svaer: 'Svær' };
@@ -190,7 +191,7 @@
       const r = JSON.parse(localStorage.getItem(RUN_KEY));
       if (!r || !r.players || !r.phase || r.phase === 'win' || r.phase === 'end') return null;
       r.mode = r.mode || 'klassisk';   // spil gemt før der var spiltyper
-      if (r.mode === 'klip' && r.kv !== 2) return null;   // ældre Klip med point i stedet for tid
+      if (r.mode === 'klip' && r.kv !== 3) return null;   // ældre Klip med point eller en anden kæde
       return r;
     } catch (e) { return null; }
   }
@@ -478,8 +479,8 @@
            <p class="hint">${KDIFF_TEXT[S.kdiff]}</p></div>`
         + (solo ? '' : ui.stepper('Runder', 'hit.step', S.rounds, 'rounds', 'Hver spiller får ' + S.rounds + (S.rounds === 1 ? ' sang' : ' sange'))
         + ui.stepper('Slurke, hvis man ikke gætter den', 'hit.step', S.sips, 'sips'))
-        + ui.stepper('Justér klip (ms)', 'hit.step', S.lag, 'lag', 'Hører I for lidt eller for meget af et halvt sekund, så ret her')
-        + `<div class="btn-row" style="margin:6px 0 4px"><button class="btn sm light" data-action="hit.testclip" ${UI.busy || !S.device ? 'disabled' : ''}>Test et halvt sekund</button></div>`;
+        + ui.stepper('Justér klip (ms)', 'hit.step', S.lag, 'lag', 'Hører I for lidt eller for meget af 0,1 sekund, så ret her. Spotify er lidt langsom, så prøv minus.')
+        + `<div class="btn-row" style="margin:6px 0 4px"><button class="btn sm light" data-action="hit.testclip" ${UI.busy || !S.device ? 'disabled' : ''}>Test 0,1 sekund</button></div>`;
     }
     return ui.shell({ title: 'Hitster', color: C, body: `
       ${resume}
@@ -603,7 +604,7 @@
      Mens et klip spiller, og når muren skubbes, tegnes kun de dele om, der ændrer sig (paintClip, paintWall),
      så tastaturet ikke lukker midt i en søgning, og muren kan glide i stedet for at hoppe. */
   const cpos = t => Math.sqrt(t / WALLS[WALLS.length - 1]) * 100;   // kvadratrod, så de korte klip kan ses på bjælken
-  const skipHtml = st => st >= WALLS.length - 1 ? 'Giv op' : 'Skip<small>+' + fmtSec(WALLS[st + 1] - WALLS[st]) + '</small>';
+  const skipHtml = st => st >= WALLS.length - 1 ? 'Giv op' : 'Skip<small>' + fmtSec(WALLS[st + 1]) + '</small>';
   function noteHtml(){
     const name = who();
     if (H.wrong.length) return `<div class="cnote cwrong">${H.wrong.map(t => `<span>${esc(t)}</span>`).join('')}</div>`;
@@ -795,7 +796,7 @@
     H = {
       mode: S.mode, phase: 'turn', players: p.slice(), idx: 0, round: 1, turn: 0, song: 1,
       goal: S.goal, sips: solo ? 0 : S.sips, bonus: S.bonus, rounds: solo ? (S.mode === 'klip' ? SOLO_SONGS : 0) : S.mode === 'streams' ? S.hrounds : S.rounds,
-      solo, key: solo ? recKey() : '', best: solo ? recNow() : null, what: solo ? recWhat() : '', newRec: false, kv: 2, heard: 0,
+      solo, key: solo ? recKey() : '', best: solo ? recNow() : null, what: solo ? recWhat() : '', newRec: false, kv: 3, heard: 0,
       timer: S.mode === 'kasser' ? S.ktimer : S.mode === 'klassisk' ? S.timer : S.mode === 'streams' ? S.htimer : 0,
       diff: S.diff, tl: {}, score: {}, deck: freshDeck(src), cur: null, champ: null, track: null, res: null, last: null,
       slot: null, marks: [false, false, false], stage: 0, cstate: 'idle', wrong: [], q: '', paused: false, deadline: 0, timeUp: false
@@ -855,7 +856,7 @@
       if (!H || H.cstate !== 'playing') return;
       H.heard = Math.max(H.heard || 0, WALLS[H.stage]);
       hush(); H.cstate = 'idle'; saveRun(); paintClip();
-    }, Math.max(150, at - performance.now()));
+    }, Math.max(40, at - performance.now()));
   }
   function stopClip(){
     clearTimeout(clipTimer); clipTimer = null;
@@ -949,7 +950,7 @@
       for (let i = 0; i < 5 && !tr; i++) tr = await Spotify.findTrack(App.pick(pool()));
       if (!tr) throw new Error('Fandt ingen numre på Spotify.');
       await playOnDevice(tr.uri);
-      setTimeout(() => { played = true; hush(); }, Math.max(200, WALLS[0] * 1000 + S.lag));
+      setTimeout(() => { played = true; hush(); }, Math.max(40, WALLS[0] * 1000 + S.lag));
     } catch (e) { UI.msg = Spotify.explain(e); }
     UI.busy = '';
     App.render();
