@@ -144,7 +144,8 @@
       if (!words.every(w => hay.includes(w))) continue;
       hits.push([s.nt.startsWith(n) ? 0 : s.nt.includes(n) ? 1 : (' ' + s.nt).includes(' ' + words[0]) ? 2 : 3, s]);
     }
-    return hits.sort((x, y) => x[0] - y[0] || x[1].t.length - y[1].t.length).slice(0, 5).map(h => h[1]);
+    /* Alle træffere, så en kunstners sange står samlet (ejeren 2026-10-17), bedste først og ellers alfabetisk. Listen ruller. */
+    return hits.sort((x, y) => x[0] - y[0] || x[1].t.localeCompare(y[1].t, 'da')).slice(0, 60).map(h => h[1]);
   }
   const results = q => {
     if (norm(q).length < 2) return '';

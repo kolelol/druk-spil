@@ -360,7 +360,8 @@ input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 
 .csq .lupe { position: absolute; left: 14px; top: 50%; width: 21px; height: 21px; margin-top: -10.5px; color: #8ea9dd; pointer-events: none; }
 .footer .btn.cskip { width: auto; min-height: 54px; flex-direction: column; gap: 1px; padding: 0 16px; line-height: 1; }
 .cskip small { font-size: 12px; opacity: .9; }
-.sr-list { position: absolute; left: 0; right: 0; bottom: calc(100% + 10px); display: flex; flex-direction: column; gap: 7px; z-index: 6; }
+/* Søgeresultater: den bedste nederst, lige over feltet; listen ruller opad, når der er mange (column-reverse starter rullet i bunden) */
+.sr-list { position: absolute; left: 0; right: 0; bottom: calc(100% + 10px); display: flex; flex-direction: column-reverse; gap: 7px; padding: 6px 2px 5px; max-height: min(46vh, 400px); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; z-index: 6; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 34px); mask-image: linear-gradient(to bottom, transparent, #000 34px); }
 .sr-list:empty { display: none; }
 .sr { width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; padding: 10px 14px 11px; border-radius: 14px; border: 2.5px solid var(--ink); background: linear-gradient(#fffaf0, #f4e4c1); color: var(--cream-ink); box-shadow: 0 3px 0 var(--ink), 0 8px 16px rgba(0, 0, 0, .35); transition: transform .06s, box-shadow .06s; }
 .sr:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
