@@ -4,10 +4,9 @@
    Hvert ord er vurderet af fem testpersoner (sjov og nem, 1-5); kun ord med 3+ i begge er med (2026-10-12). */
 const SPYGAME_WORDS = [
   { id: 'steder', navn: 'Steder', ord: [
-    'Ubåden', 'Rumstationen', 'Stripklubben', 'Fængslet', 'Kasinoet', 'Nordpolen',
+    'Stripklubben', 'Fængslet', 'Kasinoet',
     'Pyramiderne', 'Det Hvide Hus', 'Christiania', 'Roskilde Festival',
     'Legoland', 'Bakken', 'Skadestuen', 'Militærbasen',
-    'Titanic', 'Månen',
     'Fitness World',
     'Zoologisk Have', 'Oktoberfest', 'Ibiza', 'Sunny Beach', 'Mallorca', 'Prag', 'Amsterdam', 'Las Vegas',
     'Forfesten'
@@ -128,14 +127,6 @@ const SPYGAME_WORDS = [
     'Japan', 'Kina', 'Sydkorea', 'Thailand', 'Indien',
     'Egypten', 'Marokko', 'Grønland',
     'Qatar', 'Jamaica'
-  ]},
-  { id: 'superkraefter', navn: 'Superkræfter', ord: [
-    'Flyve', 'Blive usynlig', 'Læse tanker', 'Rejse i tiden', 'Teleportere', 'Superstyrke', 'Røntgensyn',
-    'Udødelighed', 'Tale med dyr', 'Stoppe tiden', 'Trække vejret under vand', 'Skyde laser fra øjnene',
-    'Kontrollere ild', 'Kontrollere vejret', 'Skifte form', 'Superfart',
-    'Klone sig selv', 'Gå gennem vægge',
-    'Blive kæmpestor',
-    'Klatre på vægge', 'Kaste lyn', 'Fryse alt til is'
   ]},
   { id: 'fraekt', navn: 'Frækt', adult: true, ord: [
     'Missionærstilling', 'Doggystyle', 'Cowgirl', '69', 'Blowjob', 'Onenightstand', 'Trekant', 'Bollevenner',
