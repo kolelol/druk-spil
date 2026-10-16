@@ -55,13 +55,13 @@ const App = (() => {
       return ctx;
     } catch (e) { return null; }
   }
-  function tone(freq, dur, type, vol, delay){
+  function tone(freq, dur, type, vol, delay, attack){
     const c = ac(); if (!c) return;
     const t = c.currentTime + (delay || 0);
     const o = c.createOscillator(); const g = c.createGain();
     o.type = type || 'square'; o.frequency.value = freq;
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(vol || 0.2, t + 0.006);
+    g.gain.exponentialRampToValueAtTime(vol || 0.2, t + (attack || 0.006));
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     o.connect(g).connect(c.destination);
     o.start(t); o.stop(t + dur + 0.03);
@@ -70,7 +70,8 @@ const App = (() => {
     tick(){ tone(1000, 0.05, 'square', 0.1); },
     ding(){ tone(660, 0.35, 'sine', 0.3); tone(880, 0.55, 'sine', 0.3, 0.13); },
     click(){ tone(520, 0.03, 'triangle', 0.08); },
-    buzz(){ tone(160, 0.28, 'sawtooth', 0.2); tone(110, 0.4, 'sawtooth', 0.2, 0.14); },
+    /* Forkert: to bløde, faldende toner. Den gamle savtak-summen var "for hård" (ejeren, 2026-10-17). */
+    buzz(){ tone(330, 0.24, 'triangle', 0.11, 0, 0.03); tone(262, 0.38, 'triangle', 0.11, 0.17, 0.03); },
     boom(){
       const c = ac(); if (!c) return;
       const t = c.currentTime;
