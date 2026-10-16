@@ -303,6 +303,12 @@ input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 
 .kasse.on { background: linear-gradient(#efffd9, #b9f18c); }
 .kasse.on .k-c { background: linear-gradient(#a6f06a, #3faa22); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .5); }
 .kasse.on .k-c svg { opacity: 1; transform: none; }
+/* Hitster: sværheden inde i spillet, en lille udgave af .seg */
+.diffbar { width: 100%; max-width: 440px; }
+.diffbar .seg { padding: 3px; gap: 3px; }
+.diffbar .seg button { min-height: 34px; padding: 0 2px; font-size: 13px; letter-spacing: .2px; }
+@media (max-width: 340px) { .diffbar .seg button { font-size: 12px; letter-spacing: 0; } }
+
 /* Hitster alene: rekorden */
 .rec-card { text-align: center; align-items: center; }
 .rec-num { font: 400 clamp(76px, 26vw, 124px)/.95 var(--display); letter-spacing: 1px; color: var(--gold); text-shadow: var(--o-l), 0 8px 22px rgba(0, 0, 0, .35); }

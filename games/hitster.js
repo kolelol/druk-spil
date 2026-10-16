@@ -165,12 +165,20 @@
     return pool().map(c => Object.assign(c, { s: HITSTER_STREAMS.mio[c.t + '|' + c.a] || 0 })).filter(c => c.s);
   }
   const fmtS = m => m >= 1000 ? (m / 1000).toFixed(2).replace('.', ',') + ' mia.' : String(m).replace('.', ',') + ' mio.';
-  /* Streams, sværhed: hvor mange gange større den ene sang højst må være end den anden */
-  const BAND = { mellem: 1.6, svaer: 1.25 };
+  /* Streams: sværheden stiger undervejs (ejeren 2026-10-17: "et hook" i starten, sværere jo længere man kommer).
+     Vinduet er, hvor mange gange større den ene sangs tal må være end den andens: først langt fra hinanden, til sidst tæt.
+     m0 er mindste afstand i starten, M1 største afstand til sidst. Alene: fuld sværhed efter hz sange. Sammen: i sidste runde. */
+  const CURVE = { let: { hz: 16, m0: 3, M1: 1.5 }, mellem: { hz: 12, m0: 2.5, M1: 1.25 }, svaer: { hz: 8, m0: 2, M1: 1.1 } };
+  function band(){
+    const c = CURVE[H.diff] || CURVE.mellem;
+    const p = Math.min(1, H.solo ? H.turn / c.hz : (H.round - 1) / Math.max(1, H.rounds - 1));
+    return { lo: 1 + (c.m0 - 1) * Math.pow(1 - p, 1.5), hi: c.M1 * Math.pow(20 / c.M1, 1 - p) };
+  }
+  const DIFFS = [{ v: 'let', l: 'Let' }, { v: 'mellem', l: 'Mellem' }, { v: 'svaer', l: 'Svær' }];
   const DIFF_TEXT = {
-    let: 'Tilfældige sange. Der kan være langt mellem tallene.',
-    mellem: 'Sangene ligger tættere på hinanden.',
-    svaer: 'Sangene ligger helt tæt. Her skal man vide det.'
+    let: 'Starter nemt og bliver langsomt sværere. Sangene kommer aldrig helt tæt på hinanden.',
+    mellem: 'Starter nemt og strammer til. Til sidst ligger sangene tæt.',
+    svaer: 'Bliver hurtigt svært. Til sidst ligger sangene helt tæt.'
   };
   const MONTHS = ['januar', 'februar', 'marts', 'april', 'maj', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'december'];
   const streamsDate = () => { const d = HITSTER_STREAMS.dato.split('-'); return Number(d[2]) + '. ' + MONTHS[Number(d[1]) - 1] + ' ' + d[0]; };
@@ -185,40 +193,64 @@
       return r;
     } catch (e) { return null; }
   }
-  /* Næste nummer fra bunken. Er den tom, blandes de numre, der ikke allerede er i spil. */
+  /* Sange, der har været vist, sover, til appen lukkes helt (ejeren 2026-10-17: "de samme sange kommer meget hyppigt").
+     Som Bombe: listen ligger i sessionStorage, som overlever en genindlæsning, men ikke en lukket app.
+     Er der ikke flere vågne, bruges de sovende, ældst først. */
+  const SEEN_KEY = 'drukspil.hitster.vist';
+  let seen = [];
+  try { seen = JSON.parse(sessionStorage.getItem(SEEN_KEY)) || []; } catch (e) { seen = []; }
+  const sid = c => c.t + '|' + c.a;
+  const isAwake = c => !seen.includes(sid(c));
+  function markSeen(c){
+    if (!c) return;
+    const k = sid(c), i = seen.indexOf(k);
+    if (i >= 0) seen.splice(i, 1);
+    seen.push(k);
+    try { sessionStorage.setItem(SEEN_KEY, JSON.stringify(seen)); } catch (e) {}
+  }
+  /* Bunken trækkes fra enden: de vågne (blandet) ligger sidst, de sovende først med de ældste nærmest enden */
+  function freshDeck(list){
+    const rank = new Map(seen.map((k, i) => [k, i]));
+    const awake = list.filter(c => !rank.has(sid(c)));
+    const asleep = list.filter(c => rank.has(sid(c))).sort((a, b) => rank.get(sid(b)) - rank.get(sid(a)));
+    return asleep.concat(App.shuffle(awake));
+  }
+  /* Næste nummer fra bunken. Er den tom, fyldes den med de numre, der ikke allerede er i spil. */
   function draw(){
     if (!H.deck.length) {
       const taken = new Set();
-      Object.values(H.tl || {}).forEach(l => l.forEach(c => taken.add(c.t + '|' + c.a)));
-      [H.cur, H.champ].forEach(c => { if (c) taken.add(c.t + '|' + c.a); });
+      Object.values(H.tl || {}).forEach(l => l.forEach(c => taken.add(sid(c))));
+      [H.cur, H.champ].forEach(c => { if (c) taken.add(sid(c)); });
       const all = deckSrc(H.mode);
-      let rest = all.filter(c => !taken.has(c.t + '|' + c.a));
+      let rest = all.filter(c => !taken.has(sid(c)));
       if (!rest.length) rest = all;
-      H.deck = App.shuffle(rest);
+      H.deck = freshDeck(rest);
     }
-    return H.deck.pop();
+    const c = H.deck.pop();
+    markSeen(c);
+    return c;
   }
-  /* Streams: næste udfordrer. Sværhedsgraden bestemmer, hvor tæt dens tal skal ligge på sangen, der skal slås.
-     To sange med samme tal giver intet rigtigt svar, så dem vælger vi aldrig. */
+  /* Streams: næste udfordrer. Kurven (band) bestemmer, hvor langt dens tal skal ligge fra sangen, der skal slås.
+     Vågne sange først. To sange med samme tal giver intet rigtigt svar, så dem vælger vi aldrig. */
   function drawChallenger(){
-    const band = BAND[H.diff];
-    if (!band) {
-      let c = draw();
-      for (let i = 0; i < 5 && c.s === H.champ.s; i++) c = draw();
-      return c;
-    }
-    const id = c => c.t + '|' + c.a;
-    if (H.deck.length < 25) {   // hold bunken fyldt, så der altid er sange tæt på
-      const skip = new Set([H.champ, H.cur].filter(Boolean).map(id).concat(H.deck.map(id)));
-      H.deck = H.deck.concat(App.shuffle(spool().filter(c => !skip.has(id(c)))));
+    const { lo, hi } = band();
+    if (H.deck.length < 25) {   // hold bunken fyldt, så der altid er sange i vinduet
+      const skip = new Set([H.champ, H.cur].filter(Boolean).map(sid));
+      H.deck = freshDeck(spool().filter(c => !skip.has(sid(c))));
     }
     const ratio = c => Math.max(c.s, H.champ.s) / Math.min(c.s, H.champ.s);
     const ok = H.deck.filter(c => c.s !== H.champ.s);
-    let near = ok.filter(c => ratio(c) <= band);
-    if (near.length < 3) near = ok.slice().sort((x, y) => ratio(x) - ratio(y)).slice(0, 3);   // ingen tæt nok: tag de nærmeste
+    const awake = ok.filter(isAwake);
+    const from = awake.length >= 3 ? awake : ok;
+    let near = from.filter(c => { const r = ratio(c); return r >= lo && r <= hi; });
+    if (near.length < 3) {   // ingen i vinduet: tag de tre, der ligger nærmest midten af det
+      const mid = Math.log(Math.sqrt(lo * hi));
+      near = from.slice().sort((x, y) => Math.abs(Math.log(ratio(x)) - mid) - Math.abs(Math.log(ratio(y)) - mid)).slice(0, 3);
+    }
     if (!near.length) return draw();
     const c = App.pick(near);
     H.deck.splice(H.deck.indexOf(c), 1);
+    markSeen(c);
     return c;
   }
   /* Find det nuværende nummer på Spotify. Numre, Spotify ikke har, springes over. */
@@ -437,7 +469,7 @@
     } else if (S.mode === 'streams') {
       rules = (solo ? '' : ui.stepper('Runder', 'hit.step', S.hrounds, 'hrounds', 'Hver spiller gætter ' + S.hrounds + (S.hrounds === 1 ? ' gang' : ' gange'))
         + ui.stepper('Slurke ved forkert svar', 'hit.step', S.sips, 'sips'))
-        + `<div class="field"><div class="label">Sværhed</div>${ui.seg('hit.seg', [{ v: 'let', l: 'Let' }, { v: 'mellem', l: 'Mellem' }, { v: 'svaer', l: 'Svær' }], S.diff, 'diff')}
+        + `<div class="field"><div class="label">Sværhed</div>${ui.seg('hit.seg', DIFFS, S.diff, 'diff')}
            <p class="hint">${DIFF_TEXT[S.diff]}</p></div>`
         + `<div class="field"><div class="label">Tid til at svare</div>${ui.seg('hit.seg', [{ v: 0, l: 'Ingen' }, { v: 5, l: '5 sek' }, { v: 10, l: '10 sek' }], S.htimer, 'htimer')}</div>`;
     } else {
@@ -480,6 +512,11 @@
       footer: `<button class="btn" data-action="hit.start" ${ready ? '' : 'disabled'}>Start spillet</button>` });
   }
 
+  /* Sværheden inde i spillet (ejeren 2026-10-17): man skal ikke ud i indstillingerne for at skifte */
+  function diffBar(){
+    const klip = (H ? H.mode : S.mode) === 'klip';
+    return `<div class="diffbar">${ui.seg('hit.diffnow', klip ? KDIFF : DIFFS, klip ? S.kdiff : S.diff, klip ? 'kdiff' : 'diff')}</div>`;
+  }
   /* Alene: rekorden for de valg, der er sat lige nu */
   function soloCard(){
     const best = recNow();
@@ -579,6 +616,7 @@
       : `${esc(App.gen(name))} tur · sang ${H.round} af ${H.rounds}`;
     return ui.shell({ title: 'Hitster', color: C, center: true, backAction: 'hit.setup', body: `
       <div class="label">${top}</div>
+      ${diffBar()}
       <div class="worth"><small>Din tid</small><b>${fmtSec(wall)}</b></div>
       <div class="cbar-wrap">
         <div class="cbar" style="--to:${cpos(wall)}%">${marks}<span class="cfill"></span><span class="crun" style="width:${cpos(H.heard || 0)}%"></span></div>
@@ -639,7 +677,7 @@
       <div class="hl-vs">${b.s > a.s ? 'Flere' : b.s < a.s ? 'Færre' : 'Lige mange'}</div>
       ${card(b, num(b), r.ok ? 'ok' : 'no')}
       <p class="strong">${esc(text)}</p>
-      ${H.solo ? '' : scoreboard()}${msg()}`,
+      ${H.solo ? '' : scoreboard()}${last ? '' : diffBar()}${msg()}`,
       footer: `<button class="btn" data-action="hit.hlnext">${last ? 'Se resultatet' : H.solo ? 'Næste sang' : 'Giv videre til ' + esc(nextName())}</button>` });
   }
   /* Streams alene: streaken og rekorden i toppen */
@@ -714,7 +752,8 @@
       <div class="big ${winners.length > 2 ? 'long' : ''}">${tie ? 'Uafgjort' : esc(list(winners, ' og ')) + (winners.length === 1 ? ' vinder' : ' deler sejren')}</div>
       ${tie ? '' : `<p class="muted">${esc(list(losers, ' og '))} ${losers.length === 1 ? 'drikker' : 'drikker hver'} ${sl(END_SIPS)}.</p>`}
       <div class="players" style="width:100%">${rank.map(n => `<div class="player-row">${ui.avatar(n)}<span class="name">${esc(n)}</span><b class="pts">${fmtScore(H.mode, H.score[n])}</b></div>`).join('')}</div>
-      ${asc ? '<p class="hint">Laveste samlede tid vinder.</p>' : ''}`,
+      ${asc ? '<p class="hint">Laveste samlede tid vinder.</p>' : ''}
+      ${H.mode === 'kasser' ? '' : diffBar()}`,
       footer: `<button class="btn" data-action="hit.start">Nyt spil</button><button class="btn ghost" data-action="hit.setup">Indstillinger</button>` });
   }
 
@@ -733,7 +772,9 @@
       <div class="rec-num">${fmtScore(k, v)}</div>
       <div class="rec-unit">${unit}</div>
       <p class="strong">${esc(note)}</p>
-      <p class="hint">Rekord for: ${esc(H.what)}</p>`,
+      <p class="hint">Rekord for: ${esc(H.what)}</p>
+      ${diffBar()}
+      ${recKey() !== H.key ? `<p class="hint">Prøv igen på ${esc(recWhat())}. ${recNow() === null ? 'Ingen rekord endnu.' : 'Rekord: ' + fmtScore(k, recNow())}</p>` : ''}`,
       footer: `<button class="btn" data-action="hit.start">Prøv igen</button><button class="btn ghost" data-action="hit.setup">Indstillinger</button>` });
   }
 
@@ -755,7 +796,7 @@
       goal: S.goal, sips: solo ? 0 : S.sips, bonus: S.bonus, rounds: solo ? (S.mode === 'klip' ? SOLO_SONGS : 0) : S.mode === 'streams' ? S.hrounds : S.rounds,
       solo, key: solo ? recKey() : '', best: solo ? recNow() : null, what: solo ? recWhat() : '', newRec: false, kv: 2, heard: 0,
       timer: S.mode === 'kasser' ? S.ktimer : S.mode === 'klassisk' ? S.timer : S.mode === 'streams' ? S.htimer : 0,
-      diff: S.diff, tl: {}, score: {}, deck: App.shuffle(src), cur: null, champ: null, track: null, res: null, last: null,
+      diff: S.diff, tl: {}, score: {}, deck: freshDeck(src), cur: null, champ: null, track: null, res: null, last: null,
       slot: null, marks: [false, false, false], stage: 0, cstate: 'idle', wrong: [], q: '', paused: false, deadline: 0, timeUp: false
     };
     p.forEach(n => { H.score[n] = 0; });
@@ -994,6 +1035,23 @@
     playChallenger();
   });
 
+  /* Sværhed skiftet inde i spillet. Alene: ny runde på den nye sværhed (rekorden er pr. sværhed).
+     Sammen: gælder fra næste sang, og pointene bliver. Er den aktuelle Klip-sang urørt, byttes den med det samme. */
+  App.on('hit.diffnow', el => {
+    const k = el.dataset.key, v = el.dataset.v;
+    if (S[k] === v) return;
+    S[k] = v; App.save();
+    const name = k === 'kdiff' ? KDIFF_L[v] : DIFF_L[v];
+    if (!H || H.phase === 'end') { App.render(); return; }
+    if (H.solo) { App.toast('Ny runde på ' + name); start(); return; }
+    if (k === 'diff') H.diff = v;
+    const taken = new Set([H.cur, H.champ].filter(Boolean).map(sid));
+    H.deck = freshDeck(balance(deckSrc(H.mode)).filter(c => !taken.has(sid(c))));
+    const swap = H.mode === 'klip' && H.phase === 'clip' && H.cstate === 'idle' && !H.heard && !H.wrong.length;
+    if (swap) { H.cur = draw(); H.track = null; H.q = ''; }
+    App.toast(swap ? 'Sværhed: ' + name : 'Sværhed: ' + name + ' fra næste sang');
+    saveRun(); App.render();
+  });
   /* Klip: den store knap spiller fra starten op til muren, eller stopper, hvis den spiller */
   App.on('hit.cplay', () => {
     if (!H || H.phase !== 'clip') return;
