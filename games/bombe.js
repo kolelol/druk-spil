@@ -10,7 +10,12 @@
   const { esc, ui } = App;
   let S = null;
   let B = null;
-  const used = new Set();
+  /* Kategorier, der har været vist, sover, til appen lukkes helt (ejeren, 2026-10-16). sessionStorage overlever en
+     genindlæsning, men ikke en lukket app. Først når alle har været vist, vågner de ældste igen; de 15 seneste sover videre. */
+  const SLEEP_KEY = 'drukspil.bombe.vist';
+  const KEEP_ASLEEP = 15;
+  let shown = [];
+  try { shown = JSON.parse(sessionStorage.getItem(SLEEP_KEY)) || []; } catch (e) { shown = []; }
   let lastTema = null;
   /* Bomben: ikon på forsiden og stor på spilleskærmen. Gnisten og røgen animeres i CSS. */
   const BOMB = `<svg viewBox="0 0 64 64" aria-hidden="true">
@@ -35,17 +40,24 @@
   function themes(){
     return BOMBE_CATEGORIES.filter(g => g.ord.length).map(g => ({ tema: g.tema, ord: g.ord }));
   }
-  /* Temaet skifter hver gang, så to kategorier i træk ikke ligner hinanden, og samme kategori kommer ikke igen, før alle er brugt */
+  /* Næste kategori: aldrig én, der sover, og aldrig samme tema to gange i træk.
+     Hver vågen kategori har samme chance, så små temaer ikke bliver brugt op først. Har ét tema over halvdelen af de
+     vågne tilbage, tages det, så listen ikke ender med kun ét tema, der ville komme flere gange i træk. */
   function newPrompt(){
     const all = themes();
-    let cands = all.filter(g => g.tema !== lastTema && g.ord.some(c => !used.has(c)));
-    if (!cands.length) { all.forEach(g => g.ord.forEach(c => used.delete(c))); cands = all.filter(g => g.tema !== lastTema); }
-    if (!cands.length) cands = all;
-    const g = App.pick(cands);
-    const left = g.ord.filter(c => !used.has(c));
-    const c = App.pick(left.length ? left : g.ord);
-    used.add(c); lastTema = g.tema;
-    return c;
+    const valid = new Set(all.flatMap(g => g.ord));
+    shown = shown.filter(c => valid.has(c));
+    const awake = () => all.flatMap(g => g.ord.filter(c => !shown.includes(c)).map(c => ({ c, tema: g.tema })));
+    let free = awake();
+    if (!free.length) { shown = shown.slice(-Math.min(KEEP_ASLEEP, valid.size - 1)); free = awake(); }
+    const count = {};
+    free.forEach(f => { count[f.tema] = (count[f.tema] || 0) + 1; });
+    const big = Object.keys(count).find(t => t !== lastTema && count[t] * 2 > free.length);
+    const other = free.filter(f => big ? f.tema === big : f.tema !== lastTema);
+    const pick = App.pick(other.length ? other : free);
+    shown.push(pick.c); lastTema = pick.tema;
+    try { sessionStorage.setItem(SLEEP_KEY, JSON.stringify(shown)); } catch (e) {}
+    return pick.c;
   }
   /* Hvor langt lunten er brændt, 0 til 1 */
   const burnt = () => Math.min(1, (performance.now() - B.t0) / B.dur);
