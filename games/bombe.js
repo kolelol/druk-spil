@@ -31,10 +31,9 @@
     render
   });
 
+  /* Ingen frække kategorier i Bombe: ejeren tog dem ud (2026-10-16) */
   function themes(){
-    const t = BOMBE_CATEGORIES.map(g => ({ tema: g.tema, ord: g.ord }));
-    if (App.settings().adult) t.push({ tema: 'Frækt', ord: BOMBE_CATEGORIES_ADULT });
-    return t;
+    return BOMBE_CATEGORIES.filter(g => g.ord.length).map(g => ({ tema: g.tema, ord: g.ord }));
   }
   /* Temaet skifter hver gang, så to kategorier i træk ikke ligner hinanden, og samme kategori kommer ikke igen, før alle er brugt */
   function newPrompt(){

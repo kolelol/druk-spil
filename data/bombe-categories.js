@@ -4,51 +4,37 @@
    (partygamesnight.com) og det danske drukspil "Kategorier" (bilmærker, danske byer). Oversat, ikke opfundet.
    Udeladt fra kilderne: ord-lege ("et ord på 8 bogstaver"), åbne "måder at..."-opgaver og rene paratvidens-lister.
    Temaerne bruges af spillet til at skifte slags hver gang. Hold det danske nede.
-   BOMBE_CATEGORIES_ADULT vises kun med "Frækt indhold" slået til.
-   Hver kategori er vurderet af fem testpersoner (sjov 3+, nem 3,4+); resten er fjernet (2026-10-12). */
+   Hver kategori er vurderet af fem testpersoner (sjov 3+, nem 3,4+); resten er fjernet (2026-10-12).
+   2026-10-16 valgte ejeren selv: ud med hverdagslisterne (Pålæg, Slik, Morgenmad, Ting i en kuffert, Legetøj, Byer,
+   Videospil og flere), Klassikerne (Pige- og drengenavne, Kropsdele, Jobs), Actionfilm, Kendte og alt frækt;
+   ind med Urmærker, Hovedstæder i verden, Amerikanske præsidenter, Michael Jackson-sange og Film med Mads Mikkelsen.
+   Bombe har ingen frække kategorier, heller ikke med "Frækt indhold" slået til. */
 const BOMBE_CATEGORIES = [
   { tema: 'Byen og druk', ord: [
-    'Ølmærker', 'Shots', 'Spiritus',
-    'Natmad'
+    'Ølmærker', 'Shots', 'Spiritus', 'Natmad'
   ]},
   { tema: 'Mad og drikke', ord: [
-    'Drikkevarer', 'Morgenmad', 'Frugter', 'Grøntsager', 'Noget på en pizza',
-    'Fastfood', 'Slik', 'Sodavand',
-    'Ting i et køleskab', 'Ting man kan grille', 'Pålæg'
+    'Drikkevarer', 'Frugter', 'Grøntsager', 'Fastfood', 'Ting i et køleskab'
   ]},
   { tema: 'Dyr', ord: [
-    'Dyr i havet', 'Kæledyr', 'Dyr i junglen',
-    'Farlige dyr'
+    'Dyr i havet', 'Kæledyr', 'Dyr i junglen', 'Farlige dyr'
   ]},
   { tema: 'Sport', ord: [
-    'Sportsgrene', 'Sportsstjerner', 'Sportsudstyr', 'Fodboldspillere',
-    'Fodboldklubber', 'Premier League-klubber', 'Øvelser i fitness'
+    'Sportsgrene', 'Sportsstjerner', 'Fodboldspillere', 'Fodboldklubber'
   ]},
   { tema: 'Gaming og internet', ord: [
-    'Videospil', 'Apps', 'Mobilspil'
+    'Apps', 'Mobilspil'
   ]},
   { tema: 'Mærker og ting', ord: [
-    'Bilmærker', 'Tøjmærker', 'Sneakermærker', 'Store firmaer', 'Supermarkeder',
-    'Tøj', 'Legetøj',
-    'Transportmidler',
-    'Ting i en kuffert', 'Ting i et køkken', 'Ting på et badeværelse', 'Ting i en bil',
-    'Ting på en strand'
+    'Bilmærker', 'Tøjmærker', 'Sneakermærker', 'Urmærker', 'Store firmaer',
+    'Transportmidler', 'Ting i et køkken', 'Ting på et badeværelse'
   ]},
   { tema: 'Verden', ord: [
-    'Lande', 'Byer', 'Byer i Danmark'
+    'Lande', 'Hovedstæder i verden', 'Byer i Danmark', 'Amerikanske præsidenter'
   ]},
   { tema: 'Film, musik og kendte', ord: [
-    'Film', 'Actionfilm', 'Tv-serier', 'Realityprogrammer', 'Tegnefilmsfigurer',
-    'Superhelte', 'Sangere', 'Rappere', 'Danske rappere', 'Kendte', 'Kendte danskere',
+    'Film', 'Film med Mads Mikkelsen', 'Tv-serier', 'Realityprogrammer', 'Tegnefilmsfigurer',
+    'Superhelte', 'Sangere', 'Michael Jackson-sange', 'Rappere', 'Danske rappere', 'Kendte danskere',
     'Skuespillere'
-  ]},
-  { tema: 'Klassikere', ord: [
-    'Pigenavne', 'Drengenavne', 'Kropsdele', 'Jobs'
   ]}
-];
-
-const BOMBE_CATEGORIES_ADULT = [
-  'Kaldenavne for penis', 'Ord for at have sex',
-  'Pornokategorier'
-
 ];
