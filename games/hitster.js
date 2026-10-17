@@ -88,7 +88,7 @@
       App.keepAwake();
       if (S.kilde === 'spotify' && Spotify.loggedIn() && !Spotify.blocked()) { refreshDevices(true); Spotify.silence().catch(() => {}); }   // find det lydløse nummer, så første pause ikke skal vente
     },
-    onLeave(){ stopTimers(); pauseQuiet(); if (player) player.pause(); UI.testing = ''; },
+    onLeave(){ stopTimers(); pauseQuiet(false); if (player) player.pause(); UI.testing = ''; },
     render
   });
 
@@ -317,10 +317,15 @@
 
   /* ---------- afspilning ---------- */
   /* Pause, når man forlader Hitster */
-  function pauseQuiet(){
+  /* Når man forlader Hitster: det lydløse nummer på, så Spotify stadig er vågen, når man kommer tilbage fra Bombe.
+     hard: rigtig pause (kun Stop-knappen i indstillingerne). */
+  let playGen = 0;   // hvert nyt play tæller op, så en langsom pause ikke overhaler en sang, der er startet imens
+  function pauseQuiet(hard){
     if (!played || !S || !Spotify.loggedIn()) return;
     played = false; cur = null;
-    Spotify.pause(dev()).catch(() => {});
+    const gen = ++playGen;
+    if (hard) { Spotify.pause(dev()).catch(() => {}); return; }
+    Spotify.silence().then(uri => { if (gen !== playGen) return; return uri ? Spotify.play(uri, dev()) : Spotify.pause(dev()); }).catch(() => {});
   }
   /* Spotify-appen på iPhone forsvinder fra Connect få minutter efter en pause, og så kan vi ikke starte næste sang, før man
      selv trykker play i Spotify (ejeren: "den skal spille en sang, før man kan gå videre"). Et stille nummer var løsningen,
@@ -336,7 +341,8 @@
     if (!played || !S || !Spotify.loggedIn()) return;
     played = false;
     if (cur) cur.paused = Date.now();
-    Spotify.silence().then(uri => uri ? Spotify.play(uri, dev()) : Spotify.pause(dev())).catch(() => {});
+    const gen = ++playGen;
+    Spotify.silence().then(uri => { if (gen !== playGen) return; return uri ? Spotify.play(uri, dev()) : Spotify.pause(dev()); }).catch(() => {});
   }
   /* Telefonen spiller selv: 30 sekunders klip fra Deezer, der starter i omkvædet. Først kun i Klip (ejeren 2026-10-17:
      "i stedet for at sangen starter fra start og det lange omkvæd kommer"), samme aften standard i alle spiltyper, fordi
@@ -429,18 +435,30 @@
   }
 
   /* Afspil på den valgte enhed. Er enheden forsvundet (appen blev lukket), finder vi den igen. */
+  /* Afspil på den valgte enhed. Efter sangen lægges det lydløse nummer i køen tre gange (cirka 30 minutter), så Spotify
+     ikke falder i søvn, når sangen slutter. Er enheden væk (appen blev lukket, eller id'et skiftede), spørges der igen et
+     par gange, for den kan være ved at vågne, og så findes den på navn. */
   async function playOnDevice(uri, positionMs){
     played = true;
+    const gen = ++playGen;
     cur = { uri, at: Date.now(), offset: positionMs || 0 };
-    try { await Spotify.play(uri, dev(), positionMs); }
+    const sil = await Spotify.silence().catch(() => null);
+    const tail = sil && sil !== uri ? [sil, sil, sil] : [];
+    const go = id => Spotify.play(uri, id, positionMs, tail);
+    try { await go(dev()); }
     catch (e) {
-      if (e.status !== 404 && e.reason !== 'NO_ACTIVE_DEVICE') throw e;
-      const list = await Spotify.devices();
-      const d = list.find(x => S.device && x.name === S.device.name) || list.find(x => x.is_active) || list[0];
+      if (e.status !== 404 && e.reason !== 'NO_ACTIVE_DEVICE' && e.status !== 502 && e.status !== 503) throw e;
+      let d = null;
+      for (let i = 0; i < 3 && !d; i++) {
+        if (i) await new Promise(r => setTimeout(r, 1200));
+        const list = await Spotify.devices().catch(() => []);
+        d = list.find(x => S.device && x.id === S.device.id) || list.find(x => S.device && x.name === S.device.name) || list.find(x => x.is_active) || list[0] || null;
+      }
       if (!d) throw e;
       S.device = { id: d.id, name: d.name }; App.save();
-      await Spotify.play(uri, d.id, positionMs);
+      await go(d.id);
     }
+    if (gen === playGen) cur.at = Date.now();   // tiden tælles fra, hvor afspilningen faktisk kom i gang
   }
   /* Fortsæt, hvor stilheden blev sat på: samme nummer, samme sted */
   async function resumePlayback(){
@@ -560,7 +578,7 @@
     if (!Spotify.loggedIn()) {
       return `<div class="card"><div class="label">Spotify</div>
         <p>Musikken spilles over Spotify. Kun den, der styrer telefonen, skal have Premium og logge ind. De andre behøver ingenting.</p>
-        ${UI.msg ? `<p class="warn">${esc(UI.msg)}</p>` : ''}
+        ${msg()}
         <button class="btn light" style="margin-top:10px" data-action="hit.login">Log ind med Spotify</button>
         <details class="how"><summary>Første gang? Sådan sætter du det op</summary>
           <p>1. Åbn <b>developer.spotify.com/dashboard</b> og din app, og tryk Settings.</p>
@@ -582,7 +600,7 @@
         <div><div class="strong">Forbundet</div><small>${S.device ? 'Afspiller på: ' + esc(S.device.name) : 'Vælg, hvor musikken skal spille'}</small></div>
         <button class="btn sm ghost" data-action="hit.devices" ${UI.loading ? 'disabled' : ''}>${UI.loading ? 'Leder...' : 'Find enheder'}</button>
       </div>
-      ${UI.msg ? `<p class="warn">${esc(UI.msg)}</p>` : ''}
+      ${msg()}
       ${devs}
       ${S.device ? `<div class="btn-row"><button class="btn sm light" data-action="hit.test" ${UI.busy ? 'disabled' : ''}>${UI.busy === 'test' ? 'Henter...' : 'Test lyden'}</button><button class="btn sm ghost" data-action="hit.stop">Stop</button></div>` : ''}
       ${UI.testing ? `<p class="hint">Spiller: ${esc(UI.testing)}</p>` : ''}
@@ -704,7 +722,8 @@
     return `<div class="chips" style="justify-content:center">${H.players.map((n, i) => `<span class="chip ${i === cur ? 'on' : ''}">${esc(n)} <b>${val(n)}</b></span>`).join('')}</div>`;
   }
   const controls = () => `<div class="btn-row"><button class="btn sm ghost" data-action="hit.replay">Hør igen</button><button class="btn sm ghost" data-action="hit.pause">${H.paused ? 'Afspil' : 'Pause'}</button></div>`;
-  const msg = () => UI.msg ? `<p class="warn">${esc(UI.msg)}</p>` : '';
+  /* Fejl på skærmen. Er Spotify faldet i søvn, får man en knap, der åbner Spotify-appen direkte, så man kan hoppe tilbage og trykke igen. */
+  const msg = () => UI.msg ? `<p class="warn">${esc(UI.msg)}</p>${/faldet i søvn/.test(UI.msg) ? '<a class="btn sm ghost" href="spotify:" style="margin:4px auto 0">Åbn Spotify</a>' : ''}` : '';
 
   /* Før nummeret spilles (klassisk og kasser) */
   function renderTurn(){
@@ -1160,7 +1179,7 @@
     UI.busy = '';
     App.render();
   });
-  App.on('hit.stop', () => { UI.testing = ''; played = true; pauseQuiet(); App.render(); });
+  App.on('hit.stop', () => { UI.testing = ''; played = true; pauseQuiet(true); App.render(); });
   /* Telefonen: spil et tilfældigt klip i seks sekunder, så lydstyrken kan tjekkes (og iOS låses op) */
   let testTimer = null;
   App.on('hit.testpv', async () => {

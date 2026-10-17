@@ -118,7 +118,8 @@ const Spotify = (() => {
 
   const devices = async () => ((await api('GET', '/me/player/devices')).devices || []).filter(d => !d.is_restricted);
   const dev = id => id ? '?device_id=' + encodeURIComponent(id) : '';
-  const play = (uri, deviceId, positionMs) => api('PUT', '/me/player/play' + dev(deviceId), { uris: [uri], position_ms: Math.max(0, Math.floor(positionMs || 0)) });
+  /* tail: numre, der lægges i køen efter sangen (Hitster lægger det lydløse nummer ind, så Spotify ikke falder i søvn, når sangen slutter) */
+  const play = (uri, deviceId, positionMs, tail) => api('PUT', '/me/player/play' + dev(deviceId), { uris: [uri].concat(tail || []), position_ms: Math.max(0, Math.floor(positionMs || 0)) });
   const pause = deviceId => api('PUT', '/me/player/pause' + dev(deviceId));
   const resume = deviceId => api('PUT', '/me/player/play' + dev(deviceId));   // uden nummer: fortsætter, hvor pausen var
   /* Et stille nummer, sat på i stedet for pause: en pauset Spotify-app på iPhone bliver lukket ned af systemet efter få
@@ -199,7 +200,7 @@ const Spotify = (() => {
     if (r === 'NETWORK') return 'Ingen forbindelse til Spotify. Tjek nettet og prøv igen.';
     if (r === 'NO_TOKEN' || r === 'invalid_grant' || s === 401) return 'Du er logget ud af Spotify. Log ind igen.';
     if (r === 'PREMIUM_REQUIRED') return 'Spotify kræver Premium for at styre afspilning.';
-    if (r === 'NO_ACTIVE_DEVICE' || s === 404) return 'Ingen afspiller fundet. Åbn Spotify-appen, tryk play på et nummer, og vælg enheden igen.';
+    if (r === 'NO_ACTIVE_DEVICE' || s === 404) return 'Spotify er faldet i søvn. Åbn Spotify-appen, og kom tilbage hertil. Hjælper det ikke, så tryk play på et nummer i Spotify først.';
     if (r === 'invalid_client' || r === 'invalid_request') return 'Spotify afviste loginet: ' + (e.message || r) + '. Tjek, at adressen er tilføjet som Redirect URI i Spotify Dashboard.';
     if (s === 403) return 'Spotify sagde nej. Står din Spotify-mail under User Management i Dashboard, og har du Premium?';
     if (s === 429) return 'Spotify beder os vente lidt. Prøv igen om et øjeblik.';
