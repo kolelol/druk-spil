@@ -10,7 +10,7 @@
 (() => {
   const ID = 'hitster';
   const C = '#16c46b';
-  const DEF = { mode: 'klassisk', goal: 8, from: 0, musik: 'alle', sips: 2, bonus: true, timer: 0, rounds: 3, ktimer: 0, songs: 10, lag: 0, hrounds: 5, diff: 'mellem', htimer: 0, device: null, kdiff: 'mellem', kstart: 'omkvaed', solo: 0, rec: {} };
+  const DEF = { mode: 'klassisk', goal: 8, from: 0, musik: 'alle', sips: 2, bonus: true, timer: 0, rounds: 3, ktimer: 0, songs: 10, lag: 0, hrounds: 5, diff: 'mellem', htimer: 0, device: null, kdiff: 'mellem', kilde: 'telefon', solo: 0, rec: {} };
   const RUN_KEY = 'drukspil.hitster.run';
   const BONUS = 2;      // slurke at dele ud for at kunne kunstner og titel (klassisk)
   const END_SIPS = 3;   // slurke: de andre drikker ved sejr i klassisk, taberen i kasser, klip og streams
@@ -19,7 +19,8 @@
   const WALLS = [0.1, 1, 5, 10, 15, 30];   // ejerens kæde (2026-10-17): hvert forkert svar rykker ét led op, efter 30 har man tabt
   const MISS = 40;          // klip: får man den ikke, tæller den som 40 sekunder
   const SOLO_SONGS = 10;    // klip alene: altid 10 sange, så rekorderne kan sammenlignes
-  const KSTART = [{ v: 'omkvaed', l: 'I omkvædet' }, { v: 'start', l: 'Fra starten' }];
+  /* Musikkilde. Telefonen: Deezers 30 sekunders preview fra omkvædet, spillet af telefonen selv. Spotify: hele sangen over Spotify Connect. */
+  const KILDE = [{ v: 'telefon', l: 'Telefonen' }, { v: 'spotify', l: 'Spotify' }];
   const KDIFF = [{ v: 'let', l: 'Let' }, { v: 'mellem', l: 'Mellem' }, { v: 'svaer', l: 'Svær' }, { v: 'ekspert', l: 'Ekspert' }, { v: 'umulig', l: 'Umulig' }];
   const KDIFF_TEXT = {
     let: 'De mest streamede sange. Dem kan alle.',
@@ -42,8 +43,8 @@
   const MODE_TEXT = {
     klassisk: 'Sæt nummeret på rette plads i din tidslinje. Rigtigt: du beholder kortet. Forkert: du drikker, og kortet er væk. Først til målet vinder.',
     kasser: 'Gæt titel, kunstner og årstal. Den, der holder telefonen, ser svaret og sætter kryds. Hvert kryds er et point.',
-    klip: 'Hver spiller får sin egen sang og hører 0,1 sekund, fra omkvædet eller fra starten. Gæt ved at søge efter titlen. Skip eller et forkert gæt skubber muren, og sangen kører videre. Din tid er, hvor meget du hørte. Laveste samlede tid vinder.',
-    streams: 'Højere eller lavere: har den nye sang flere eller færre streams på Spotify end den forrige? Rigtigt giver et point, forkert koster slurke. Virker også uden Spotify, bare uden musik.'
+    klip: 'Hver spiller får sin egen sang og hører 0,1 sekund fra omkvædet (med Spotify: fra starten). Gæt ved at søge efter titlen. Skip eller et forkert gæt skubber muren, og sangen kører videre. Din tid er, hvor meget du hørte. Laveste samlede tid vinder.',
+    streams: 'Højere eller lavere: har den nye sang flere eller færre streams på Spotify end den forrige? Rigtigt giver et point, forkert koster slurke.'
   };
 
   /* Vinylplade med node */
@@ -73,13 +74,19 @@
 
   App.register({
     id: ID, navn: 'Hitster', farve: C, ikon: IKON,
-    kort: 'Fire musikspil over Spotify: tidslinje, kasser, klip og højere eller lavere på streams. Kræver Spotify Premium på den ene telefon.',
+    kort: 'Fire musikspil: tidslinje, kasser, klip og højere eller lavere på streams. Telefonen spiller selv, Spotify er et tilvalg.',
     onEnter(){
       S = App.gameSettings(ID, DEF); H = null; SAVED = loadRun(); UI.msg = ''; UI.busy = '';
       if ('dk' in S) { if (S.dk === false) S.musik = 'int'; delete S.dk; App.save(); }   // gammel indstilling "Med dansk musik"
       if (S.rec) Object.keys(S.rec).filter(k => k.startsWith('klip|')).forEach(k => { delete S.rec[k]; App.save(); });   // rekorder fra den gamle kæde
+      if ('kstart' in S) {   // gammel Klip-indstilling: "I omkvædet" / "Fra starten" blev til musikkilden for alle spiltyper
+        S.kilde = S.kstart === 'start' ? 'spotify' : 'telefon'; delete S.kstart;
+        if (S.rec) for (const k of Object.keys(S.rec)) { const nk = k.replace('|omkvaed|', '|telefon|').replace('|start|', '|spotify|'); if (nk !== k) { S.rec[nk] = S.rec[k]; delete S.rec[k]; } }
+        App.save();
+      }
+      if (S.kilde !== 'spotify' && S.kilde !== 'telefon') { S.kilde = 'telefon'; App.save(); }
       App.keepAwake();
-      if (Spotify.loggedIn() && !Spotify.blocked()) { refreshDevices(true); }
+      if (S.kilde === 'spotify' && Spotify.loggedIn() && !Spotify.blocked()) { refreshDevices(true); }
     },
     onLeave(){ stopTimers(); pauseQuiet(); if (player) player.pause(); UI.testing = ''; },
     render
@@ -96,12 +103,12 @@
      I Streams er højest bedst (længste streak), i Klip er lavest bedst (kortest samlet tid). */
   const canSolo = m => m === 'streams' || m === 'klip';
   const isSolo = () => !!S.solo && canSolo(S.mode);
-  const recKey = () => S.mode === 'streams' ? ['streams', S.diff, S.musik, S.from, S.htimer].join('|') : ['klip2', S.kdiff, S.kstart, S.musik, S.from].join('|');   // klip2: kæden blev ændret 2026-10-17, gamle tider kan ikke sammenlignes
+  const recKey = () => S.mode === 'streams' ? ['streams', S.diff, S.musik, S.from, S.htimer].join('|') : ['klip2', S.kdiff, S.kilde, S.musik, S.from].join('|');   // klip2: kæden blev ændret 2026-10-17, gamle tider kan ikke sammenlignes
   const recNow = () => { const v = (S.rec || {})[recKey()]; return typeof v === 'number' ? v : null; };
   const MUSIK_L = { alle: 'Alt', dk: 'Kun dansk', int: 'Uden dansk' };
   const DIFF_L = { let: 'Let', mellem: 'Mellem', svaer: 'Svær' };
   const KDIFF_L = Object.fromEntries(KDIFF.map(d => [d.v, d.l]));
-  const recWhat = () => [S.mode === 'streams' ? DIFF_L[S.diff] : KDIFF_L[S.kdiff] + (S.kstart === 'start' ? ' · fra starten' : ' · omkvæd'), MUSIK_L[S.musik], S.from ? S.from + '+' : 'alle år']
+  const recWhat = () => [S.mode === 'streams' ? DIFF_L[S.diff] : KDIFF_L[S.kdiff] + (S.kilde === 'spotify' ? ' · Spotify' : ' · telefon'), MUSIK_L[S.musik], S.from ? S.from + '+' : 'alle år']
     .concat(S.mode === 'streams' ? [S.htimer ? S.htimer + ' sek' : 'ingen tid'] : []).join(' · ');
   /* Streams: rekorden gemmes, så snart den er slået (scoren stiger kun). Klip: først når alle sange er spillet. */
   function saveRecord(final){
@@ -203,8 +210,9 @@
     try {
       const r = JSON.parse(localStorage.getItem(RUN_KEY));
       if (!r || !r.players || !r.phase || r.phase === 'win' || r.phase === 'end') return null;
+      if (r.src !== 'telefon' && r.src !== 'spotify') return null;   // gemt før musikkilden kom til
       r.mode = r.mode || 'klassisk';   // spil gemt før der var spiltyper
-      if (r.mode === 'klip' && r.kv !== 4) return null;   // ældre Klip med point, en anden kæde eller uden preview
+      if (r.mode === 'klip' && r.kv !== 5) return null;   // ældre Klip med point, en anden kæde eller uden preview
       return r;
     } catch (e) { return null; }
   }
@@ -328,17 +336,43 @@
     if (cur) cur.paused = Date.now();
     Spotify.pause(dev()).catch(() => {});
   }
-  /* Preview (Klip, "I omkvædet"): 30 sekunders klip fra Deezer, der starter i omkvædet, spillet af telefonen selv.
-     Ejeren (2026-10-17): "i stedet for at sangen starter fra start og det lange omkvæd kommer". Virker uden Spotify og
-     rammer 0,1 sekund præcist. Deezers API svarer uden CORS, så vi bruger JSONP. Linkene udløber efter nogle timer,
-     så vi gemmer Deezers nummer-id og henter linket igen. */
+  /* Telefonen spiller selv: 30 sekunders klip fra Deezer, der starter i omkvædet. Først kun i Klip (ejeren 2026-10-17:
+     "i stedet for at sangen starter fra start og det lange omkvæd kommer"), samme aften standard i alle spiltyper, fordi
+     Spotify på iPhone skal have en sang kørende, før appen kan styre den ("det dræber spillets gang"). Ingen login, intet
+     at vække, og klippet stopper præcist. Deezers API svarer uden CORS, så vi bruger JSONP. Linkene udløber efter nogle
+     timer, så vi gemmer Deezers nummer-id og henter linket igen. Coveret følger med fra Deezer. */
   const PREV_KEY = 'drukspil.deezer.preview';
   let prevCache = {};
   try { prevCache = JSON.parse(localStorage.getItem(PREV_KEY)) || {}; } catch (e) {}
   let player = null;   // ét <audio>-element: iOS låser det op ved første tryk, og så kan vi spille videre på det uden tryk
   function audioEl(){
-    if (!player) { player = new Audio(); player.preload = 'auto'; }
+    if (!player) {
+      player = new Audio(); player.preload = 'auto';
+      try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch (e) {}
+      /* Klippet er slut: vis det på Pause-knappen, så "Hør igen" er det naturlige næste tryk */
+      player.addEventListener('ended', () => { if (H && usePreview() && H.phase !== 'clip' && !H.paused) { H.paused = true; App.render(); } });
+    }
     return player;
+  }
+  /* iOS tillader kun lyd, der er startet af et tryk, men ét tryk låser elementet op for resten af sessionen. På "Start spillet"
+     spiller vi derfor et lydløst klip (0,1 s stilhed, lavet her), så Streams og næste sange kan starte af sig selv. */
+  const SILENT = (() => {
+    const n = 4410, b = new ArrayBuffer(44 + n * 2), v = new DataView(b);
+    const w = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, 44100, true); v.setUint32(28, 88200, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+    let s = ''; const u = new Uint8Array(b); for (let i = 0; i < u.length; i++) s += String.fromCharCode(u[i]);
+    return 'data:audio/wav;base64,' + btoa(s);
+  })();
+  let unlocked = false;
+  function unlockAudio(){
+    if (unlocked) return;
+    const a = audioEl();
+    const real = a.src && a.src.startsWith('http');   // et rigtigt klip ligger klar: spil det lydløst et øjeblik i stedet
+    if (!real && a.src !== SILENT) a.src = SILENT;
+    if (real) a.muted = true;
+    const p = a.play();
+    if (p && p.then) p.then(() => { unlocked = true; a.pause(); if (real) { a.currentTime = 0; a.muted = false; } }).catch(() => { if (real) a.muted = false; });
   }
   function jsonp(url){
     return new Promise(resolve => {
@@ -357,33 +391,39 @@
   const pbase = t => t.replace(/\s*[\(\[].*$/, '').replace(/\s+-\s.*$/, '').trim() || t;
   async function findPreview(c){
     const k = sid(c), hit = prevCache[k];
-    if (hit && hit.url && Date.now() - hit.at < 3 * 3600e3) return hit.url;
+    if (hit && hit.url && Date.now() - hit.at < 3 * 3600e3) return { url: hit.url, img: hit.img || '' };
     if (hit && hit.none && Date.now() - hit.none < 7 * 86400e3) return null;
-    let id = hit && hit.id, url = null;
-    if (id) { const t = await jsonp('https://api.deezer.com/track/' + id); url = (t && t.preview) || null; }
+    let id = hit && hit.id, url = null, img = (hit && hit.img) || '';
+    if (id) { const t = await jsonp('https://api.deezer.com/track/' + id); url = (t && t.preview) || null; if (t && t.album && t.album.cover_medium) img = t.album.cover_medium; }
     if (!url) {
       const j = await jsonp('https://api.deezer.com/search?q=' + encodeURIComponent(c.a + ' ' + c.t) + '&limit=15');
       const rows = ((j && j.data) || []).filter(x => x.preview && norm(pbase(x.title)) === norm(pbase(c.t)));
       const first = norm(c.a).split(' ')[0];
       const best = rows.find(x => !PBAD.test(x.title) && norm(x.artist.name).includes(first)) || rows.find(x => !PBAD.test(x.title)) || rows[0];
-      if (best) { id = best.id; url = best.preview; }
+      if (best) { id = best.id; url = best.preview; img = (best.album && best.album.cover_medium) || ''; }
     }
-    prevCache[k] = url ? { id, url, at: Date.now() } : { none: Date.now() };
+    prevCache[k] = url ? { id, url, img, at: Date.now() } : { none: Date.now() };
     try { localStorage.setItem(PREV_KEY, JSON.stringify(prevCache)); } catch (e) {}
-    return url;
+    return url ? { url, img } : null;
   }
-  const usePreview = () => !!H && H.mode === 'klip' && H.kstart === 'omkvaed';
-  /* Hent previewet til den aktuelle sang og læg det i afspilleren, så første tryk spiller med det samme.
-     Har Deezer ikke sangen, tages den næste i bunken. */
+  const usePreview = () => !!H && H.src === 'telefon';
+  /* Hent klippet til den aktuelle sang og læg det i afspilleren, så "Afspil sang" og Klip-knappen spiller i selve trykket
+     (det kræver iOS). Har Deezer ikke sangen, tages den næste i bunken. Gælder før en sang i Klassisk, Kasser og Klip. */
   async function prepPreview(){
-    for (let i = 0; i < 5 && H && H.phase === 'clip' && usePreview() && !H.pv; i++) {
-      const song = H.cur;
-      const url = await findPreview(song);
-      if (!H || H.phase !== 'clip' || H.cur !== song) return;
-      if (url) { H.pv = url; const a = audioEl(); if (a.src !== url) { a.src = url; a.load(); } saveRun(); paintClip(); return; }
+    const open = () => H && usePreview() && (H.phase === 'clip' || H.phase === 'turn');
+    for (let i = 0; i < 6 && open() && !H.pv; i++) {
+      const song = H.cur, ph = H.phase;
+      const p = await findPreview(song);
+      if (!open() || H.phase !== ph || H.cur !== song) return;
+      if (p) {
+        H.pv = p.url; H.track = { uri: null, img: p.img };
+        const a = audioEl(); if (a.src !== p.url) { a.src = p.url; a.load(); }
+        saveRun(); if (H.phase === 'clip') paintClip();
+        return;
+      }
       H.cur = draw(); H.track = null; saveRun();
     }
-    if (H && H.phase === 'clip' && usePreview() && !H.pv) { UI.msg = 'Fandt ingen preview. Prøv Skip, eller vælg "Fra starten" i indstillingerne.'; App.render(); }
+    if (open() && !H.pv) { UI.msg = 'Fandt ingen klip til sangen. Tjek nettet, og prøv igen.'; App.render(); }
   }
 
   /* Afspil på den valgte enhed. Er enheden forsvundet (appen blev lukket), finder vi den igen. */
@@ -425,10 +465,21 @@
   }
   /* Streams: spil udfordreren, hvis Spotify er klar. Spillet kører videre uden musik, hvis det ikke lykkes. */
   function playChallenger(){
-    H.track = null; H.paused = false;
-    if (!Spotify.loggedIn() || Spotify.blocked() || !S.device) return;
+    H.track = null; H.paused = false; H.pv = null;
     const c = H.cur;
     const same = () => H && H.phase === 'hl' && H.cur === c;
+    if (usePreview()) {
+      findPreview(c).then(async p => {
+        if (!p || !same()) return;
+        H.pv = p.url; H.track = { uri: null, img: p.img };
+        const a = audioEl(); if (a.src !== p.url) a.src = p.url;
+        a.muted = false; a.currentTime = 0;
+        await a.play().then(() => { unlocked = true; }).catch(() => {});
+        if (same()) { saveRun(); App.render(); }
+      }).catch(() => {});
+      return;
+    }
+    if (!Spotify.loggedIn() || Spotify.blocked() || !S.device) return;
     Spotify.findTrack(c).then(async tr => {
       if (!tr || !same()) return;
       await playOnDevice(tr.uri);
@@ -549,8 +600,8 @@
     const n = solo ? 1 : p.length;
     const src = deckSrc(S.mode);
     const enough = src.length >= n + 10;
-    const preview = S.mode === 'klip' && S.kstart === 'omkvaed';
-    const ready = n >= (solo ? 1 : 2) && enough && (S.mode === 'streams' || preview || (Spotify.loggedIn() && !!S.device));
+    const preview = S.kilde !== 'spotify';
+    const ready = n >= (solo ? 1 : 2) && enough && (preview || S.mode === 'streams' || (Spotify.loggedIn() && !!S.device));
     const few = enough ? '' : `<p class="warn">${S.mode === 'streams'
       ? 'Der er kun streams-tal for ' + src.length + ' af de valgte numre. Vælg mere musik eller en anden spiltype.'
       : 'For få numre med de valg. Vælg mere musik eller flere år.'}</p>`;
@@ -574,9 +625,7 @@
            <p class="hint">${DIFF_TEXT[S.diff]}</p></div>`
         + `<div class="field"><div class="label">Tid til at svare</div>${ui.seg('hit.seg', [{ v: 0, l: 'Ingen' }, { v: 5, l: '5 sek' }, { v: 10, l: '10 sek' }], S.htimer, 'htimer')}</div>`;
     } else {
-      rules = `<div class="field"><div class="label">Klippet starter</div>${ui.seg('hit.seg', KSTART, S.kstart, 'kstart')}
-           <p class="hint">${preview ? 'Et 30 sekunders preview fra Deezer, der starter i omkvædet. Telefonen spiller det selv, så det virker uden Spotify og rammer 0,1 sekund præcist.' : 'Hele sangen fra begyndelsen over Spotify. Kræver Spotify Premium og en enhed, og Spotify er lidt langsom til at stoppe.'}</p></div>`
-        + `<div class="field"><div class="label">Sværhed</div>${ui.seg('hit.seg', KDIFF, S.kdiff, 'kdiff')}
+      rules = `<div class="field"><div class="label">Sværhed</div>${ui.seg('hit.seg', KDIFF, S.kdiff, 'kdiff')}
            <p class="hint">${KDIFF_TEXT[S.kdiff]}</p></div>`
         + (solo ? '' : ui.stepper('Runder', 'hit.step', S.rounds, 'rounds', 'Hver spiller får ' + S.rounds + (S.rounds === 1 ? ' sang' : ' sange'))
         + ui.stepper('Slurke, hvis man ikke gætter den', 'hit.step', S.sips, 'sips'))
@@ -590,7 +639,14 @@
         <p class="hint">${MODE_TEXT[S.mode]}</p>
         ${canSolo(S.mode) ? `<div style="margin-top:12px">${ui.seg('hit.seg', [{ v: 0, l: 'Sammen' }, { v: 1, l: 'Alene' }], solo ? 1 : 0, 'solo')}</div>` : ''}
       </div>
-      ${preview ? '<div class="card"><div class="label">Spotify</div><p>Klip med preview bruger ikke Spotify. Lyden kommer fra telefonen (eller den højttaler, telefonen er koblet til).</p></div>' : spotifyCard()}
+      <div class="card"><div class="label">Musik fra</div>
+        ${ui.seg('hit.seg', KILDE, S.kilde, 'kilde')}
+        <p class="hint">${preview
+          ? 'Telefonen spiller selv 30 sekunders klip fra omkvædet. Ingen login, intet at vække. Lyden kommer fra telefonen eller den højttaler, den er koblet til.'
+          : 'Hele sangen over Spotify. Kræver Spotify Premium og login, og Spotify-appen skal være vågen: spiller den ikke, må I selv trykke play i Spotify først.'}</p>
+        ${preview ? `<div class="btn-row" style="margin-top:10px"><button class="btn sm light" data-action="hit.testpv" ${UI.busy ? 'disabled' : ''}>${UI.busy === 'test' ? 'Henter...' : 'Test lyden'}</button></div>${UI.testing ? `<p class="hint">Spiller: ${esc(UI.testing)}</p>` : ''}${UI.msg ? `<p class="warn">${esc(UI.msg)}</p>` : ''}` : ''}
+      </div>
+      ${preview ? '' : spotifyCard()}
       ${solo ? soloCard() : `<div class="card">
         <div class="row-between">
           <div><div class="label">Spillere</div><div class="strong">${p.length ? esc(p.join(', ')) : 'Ingen endnu'}</div></div>
@@ -897,7 +953,7 @@
     H = {
       mode: S.mode, phase: 'turn', players: p.slice(), idx: 0, round: 1, turn: 0, song: 1,
       goal: S.goal, sips: solo ? 0 : S.sips, bonus: S.bonus, rounds: solo ? (S.mode === 'klip' ? SOLO_SONGS : 0) : S.mode === 'streams' ? S.hrounds : S.rounds,
-      solo, key: solo ? recKey() : '', best: solo ? recNow() : null, what: solo ? recWhat() : '', newRec: false, kv: 4, heard: 0, kstart: S.mode === 'klip' ? S.kstart : '', pv: null,
+      solo, key: solo ? recKey() : '', best: solo ? recNow() : null, what: solo ? recWhat() : '', newRec: false, kv: 5, heard: 0, src: S.kilde, pv: null,
       timer: S.mode === 'kasser' ? S.ktimer : S.mode === 'klassisk' ? S.timer : S.mode === 'streams' ? S.htimer : 0,
       diff: S.diff, tl: {}, score: {}, deck: freshDeck(src), cur: null, champ: null, track: null, res: null, last: null,
       slot: null, marks: [false, false, false], stage: 0, cstate: 'idle', wrong: [], q: '', paused: false, deadline: 0, timeUp: false
@@ -918,7 +974,26 @@
   /* Klassisk og kasser: find nummeret, spil det og gå videre til gættefasen */
   async function playTurn(){
     if (UI.busy) return;
-    UI.busy = 'play'; UI.msg = ''; App.render();
+    UI.busy = 'play'; UI.msg = '';
+    if (usePreview()) {
+      try {
+        const a = audioEl();
+        if (!H.pv) {   // klippet er ikke hentet endnu (langsomt net): hent det nu
+          App.render(); await prepPreview();
+          if (!H || H.phase !== 'turn') { UI.busy = ''; return; }
+          if (!H.pv) throw new Error(UI.msg || 'Fandt ingen klip til sangen. Tjek nettet, og prøv igen.');
+        }
+        if (a.src !== H.pv) a.src = H.pv;
+        a.muted = false; a.currentTime = 0;
+        await a.play(); unlocked = true;
+        H.paused = false; H.slot = null; H.timeUp = false;
+        H.phase = H.mode === 'kasser' ? 'judge' : 'place';
+        saveRun(); startTimer();
+      } catch (e) { UI.msg = e && e.name === 'NotAllowedError' ? 'Tryk på Afspil sang igen.' : (e && e.message) || 'Kunne ikke spille klippet.'; }
+      UI.busy = '';
+      App.render(); return;
+    }
+    App.render();
     try {
       await ensureTrack();
       await playOnDevice(H.track.uri);
@@ -1084,6 +1159,24 @@
     App.render();
   });
   App.on('hit.stop', () => { UI.testing = ''; played = true; pauseQuiet(); App.render(); });
+  /* Telefonen: spil et tilfældigt klip i seks sekunder, så lydstyrken kan tjekkes (og iOS låses op) */
+  let testTimer = null;
+  App.on('hit.testpv', async () => {
+    if (UI.busy) return;
+    UI.busy = 'test'; UI.msg = ''; UI.testing = ''; App.render();
+    unlockAudio();
+    try {
+      let p = null, c = null;
+      for (let i = 0; i < 6 && !p; i++) { c = App.pick(pool()); p = await findPreview(c); }
+      if (!p) throw new Error('Fandt ingen klip lige nu. Tjek nettet, og prøv igen.');
+      const a = audioEl(); a.src = p.url; a.muted = false; a.currentTime = 0;
+      await a.play(); unlocked = true;
+      UI.testing = c.t + ' af ' + c.a;
+      clearTimeout(testTimer); testTimer = setTimeout(() => { if (UI.testing) { a.pause(); UI.testing = ''; if (!H) App.render(); } }, 6000);
+    } catch (e) { UI.msg = e && e.name === 'NotAllowedError' ? 'Tryk på Test lyden igen.' : (e && e.message) || 'Kunne ikke spille.'; }
+    UI.busy = '';
+    App.render();
+  });
 
   App.on('hit.step', el => {
     const k = el.dataset.key, d = Number(el.dataset.d);
@@ -1091,16 +1184,16 @@
     S[k] = Math.min(lim[1], Math.max(lim[0], S[k] + d * lim[2]));
     App.save(); App.render();
   });
-  App.on('hit.seg', el => { const k = el.dataset.key; S[k] = k === 'mode' || k === 'musik' || k === 'diff' || k === 'kdiff' || k === 'kstart' ? el.dataset.v : Number(el.dataset.v); App.save(); App.render(); });
+  App.on('hit.seg', el => { const k = el.dataset.key; S[k] = k === 'mode' || k === 'musik' || k === 'diff' || k === 'kdiff' || k === 'kilde' ? el.dataset.v : Number(el.dataset.v); App.save(); App.render(); });
   App.on('hit.toggle', el => { S[el.dataset.key] = el.checked; App.save(); App.render(); });
 
-  App.on('hit.start', start);
+  App.on('hit.start', () => { if (S.kilde !== 'spotify') unlockAudio(); start(); });
   App.on('hit.resume', () => {
     H = SAVED; SAVED = null; UI.msg = ''; UI.busy = '';
     H.paused = false;
     if (H.cstate === 'playing' || H.cstate === 'loading') H.cstate = 'idle';
     if (H.mode === 'streams') buildRanks();
-    if (H.mode === 'klip') { H.pv = null; if (usePreview()) prepPreview(); }
+    H.pv = null; if (usePreview()) prepPreview();
     if (H.phase === 'place' || H.phase === 'judge' || (H.phase === 'hl' && !H.res)) runTimer();
     App.render();
   });
@@ -1137,9 +1230,10 @@
     if (H.turn >= H.players.length * H.rounds) { H.phase = 'end'; clearRun(); App.audio.ding(); App.render(); return; }
     H.idx = H.turn % H.players.length;
     H.round = Math.floor(H.turn / H.players.length) + 1;
-    H.cur = draw(); H.track = null; H.marks = [false, false, false]; H.timeUp = false; H.deadline = 0; H.phase = 'turn';
+    H.cur = draw(); H.track = null; H.pv = null; H.marks = [false, false, false]; H.timeUp = false; H.deadline = 0; H.phase = 'turn';
     UI.msg = '';
     saveRun(); App.render();
+    if (usePreview()) prepPreview();
   });
 
   /* Streams: gæt på flere eller færre. Samme tal tæller som rigtigt begge veje. up === null: tiden løb ud. */
@@ -1258,9 +1352,10 @@
     }
     H.idx = (H.idx + 1) % H.players.length;
     if (H.idx === 0) H.round++;
-    H.cur = draw(); H.slot = null; H.res = null; H.track = null; H.deadline = 0; H.paused = false; H.phase = 'turn';
+    H.cur = draw(); H.slot = null; H.res = null; H.track = null; H.pv = null; H.deadline = 0; H.paused = false; H.phase = 'turn';
     UI.msg = '';
     saveRun(); App.render();
+    if (usePreview()) prepPreview();
   });
 
   /* Er siden åbnet igen efter login hos Spotify, så afslut login og vis Hitster */
