@@ -213,7 +213,7 @@
     const sl = spiesLeft(), ol = othersLeft();
     let r;
     if (caught) { R.caughtName = name; R.phase = 'caught'; App.vibrate([80, 60, 80]); App.audio.ding(); App.render(); return; }
-    else if (sl >= ol) r = { over: true, caught, title: `${name} var ikke spionen`, text: `Spionerne er nu lige så mange som jer andre, så de har vundet. Alle andre end spionerne drikker 4 slurke.` };
+    else if (sl >= ol) r = { over: true, caught, title: `${name} var ikke spionen`, text: sl > 1 ? 'Spionerne er nu lige så mange som jer andre, så de har vundet. Alle andre end spionerne drikker 4 slurke.' : 'Spionen er nu lige så mange som jer andre, så spionen har vundet. Alle andre end spionen drikker 4 slurke.' };
     else r = { over: false, name };
     R.result = r;
     R.phase = 'result';

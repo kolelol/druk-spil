@@ -70,6 +70,8 @@ data/hitster-songs.js      numre: ['Titel', 'Kunstner', år], dansk musik i en s
 data/hitster-streams.js    antal streams i millioner pr. nummer (laves af tools/update-streams.js)
 tools/update-streams.js    henter friske tal fra kworb.net: node tools/update-streams.js
 tools/artist-ids.json      kunstnernes Spotify-ID, som scriptet bruger til at finde deres side
+tools/audit.js             statisk tjek af al koden: node --expose-internals tools/audit.js (ukendte navne, døde navne, knapper uden handler)
+tools/hitster-testrig.js   testrig til Hitsters lyd: falsk iPhone-lyd, falsk Deezer og falsk Spotify, indsættes i konsollen
 manifest.webmanifest, sw.js, icons/   PWA
 ```
 
