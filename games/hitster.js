@@ -314,11 +314,15 @@
     played = false; cur = null;
     Spotify.pause(dev()).catch(() => {});
   }
-  /* Rigtig pause inde i spillet. Før spillede vi et stille nummer, så Spotify-appen på iPhone ikke faldt i søvn, men ejeren vil
-     ikke have "10 minutes of silence" i sin Spotify (2026-10-17). Forsvinder enheden, finder playOnDevice den igen. */
+  /* Spotify-appen på iPhone forsvinder fra Connect få minutter efter en pause, og så kan vi ikke starte næste sang, før man
+     selv trykker play i Spotify (ejeren: "den skal spille en sang, før man kan gå videre"). Et stille nummer var løsningen,
+     men det ville ejeren ikke have i sin Spotify (2026-10-17). Derfor pauser vi aldrig mellem sangene: sangen kører videre
+     under svaret, resultatet og overleveringen, til den næste afløser den. hush() (rigtig pause) bruges kun, hvor lyden SKAL
+     stoppe: ved muren i Klip over Spotify, på Pause-knappen og i testklippet. hushPreview() stopper kun telefonens eget preview. */
   let cur = null;   // det nummer, der spiller lige nu: { uri, at (Date.now ved start), offset (ms) }
+  function hushPreview(){ if (player) player.pause(); }
   function hush(){
-    if (player) player.pause();
+    hushPreview();
     if (!played || !S || !Spotify.loggedIn()) return;
     played = false;
     if (cur) cur.paused = Date.now();
@@ -880,7 +884,7 @@
   /* ---------- spil ---------- */
   /* Slut på spillet. Alene: gem og fejr rekorden. */
   function endRun(){
-    hush(); H.phase = 'end'; clearRun();
+    hushPreview(); H.phase = 'end'; clearRun();
     if (H.solo) { saveRecord(true); if (H.newRec) App.vibrate([100, 60, 100, 60, 300]); }
     App.audio.ding(); App.render();
   }
@@ -889,7 +893,7 @@
     const p = solo ? ['Du'] : App.players();
     const src = balance(deckSrc(S.mode));
     if (p.length < (solo ? 1 : 2) || src.length < p.length + 10) return;
-    clearRun(); stopTimers(); hush();
+    clearRun(); stopTimers(); hushPreview();
     H = {
       mode: S.mode, phase: 'turn', players: p.slice(), idx: 0, round: 1, turn: 0, song: 1,
       goal: S.goal, sips: solo ? 0 : S.sips, bonus: S.bonus, rounds: solo ? (S.mode === 'klip' ? SOLO_SONGS : 0) : S.mode === 'streams' ? S.hrounds : S.rounds,
@@ -1100,7 +1104,7 @@
     if (H.phase === 'place' || H.phase === 'judge' || (H.phase === 'hl' && !H.res)) runTimer();
     App.render();
   });
-  App.on('hit.setup', () => { stopTimers(); hush(); H = null; SAVED = loadRun(); UI.msg = ''; UI.busy = ''; App.render(); });
+  App.on('hit.setup', () => { stopTimers(); hushPreview(); H = null; SAVED = loadRun(); UI.msg = ''; UI.busy = ''; App.render(); });
   App.on('hit.play', playTurn);
   App.on('hit.slot', el => {
     if (!H || H.phase !== 'place') return;
@@ -1124,7 +1128,7 @@
   });
   App.on('hit.award', () => {
     if (!H || H.phase !== 'judge') return;
-    stopTimers(); hush();
+    stopTimers(); hushPreview();
     const n = H.marks.filter(Boolean).length, name = who();
     H.score[name] += n;
     H.last = { name, pts: n };
@@ -1235,7 +1239,7 @@
 
   App.on('hit.next', () => {
     if (!H || H.phase !== 'reveal') return;
-    stopTimers(); hush();
+    stopTimers(); hushPreview();
     if (H.mode === 'klip') {
       H.turn++;
       if (H.turn >= H.players.length * H.rounds) { endRun(); return; }
