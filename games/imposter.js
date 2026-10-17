@@ -1,6 +1,7 @@
 /* Imposter, den rene udgave: alle får det samme ord, imposteren får intet. Telefonen går på omgang,
-   alle siger ét ord på skift, I stemmer én gang, og imposteren får ét gæt, hvis han bliver taget.
-   Ingen indstillinger: ejeren og vennerne vil have den version, alle kender. */
+   alle siger ét ord på skift, og når I er enige, trykker I "Afslør imposter": så står der, hvem det var, og hvad ordet var.
+   Ingen afstemning og intet gæt i appen (ejeren 2026-10-17: "det der med rigtigt/forkert gæt er ligegyldigt"), det klarer
+   bordet selv. Ingen indstillinger: ejeren og vennerne vil have den version, alle kender. */
 (() => {
   const ID = 'imposter';
   const C = '#b14cff';
@@ -46,8 +47,8 @@
       </div>
       <div class="card">
         <div class="label">Sådan spiller I</div>
-        <p>Alle ser det samme ord på skift. Én af jer er imposter og får ikke ordet. Sig ét ord, der passer til jeres ord, rundt om bordet. Vær ikke for tydelig, imposteren lytter med. Så stemmer I.</p>
-        <p>Rammer I imposteren, må imposteren gætte ordet. Rigtigt: alle andre drikker 2. Forkert: imposteren drikker 4. Rammer I forkert, slap imposteren, og alle andre drikker 2.</p>
+        <p>Alle ser det samme ord på skift. Én af jer er imposter og får ikke ordet. Sig ét ord, der passer til jeres ord, rundt om bordet. Vær ikke for tydelig, imposteren lytter med.</p>
+        <p>Når I har peget på én, trykker I Afslør imposter. Så ser I, hvem det var, og hvad ordet var. Resten klarer I selv.</p>
       </div>`,
       footer: `<button class="btn" data-action="imp.start" ${n >= 3 ? '' : 'disabled'}>Start runde</button>` });
   }
@@ -81,29 +82,15 @@
         <div class="label">Alle har set deres ord</div>
         <div class="big">${esc(R.starter)} starter</div>
         ${ui.table(R.order, { sm: true, start: R.starter, cur: R.starter })}
-        <p class="muted">Sig ét ord på skift, samme vej rundt som telefonen gik. Tag en runde eller to, og stem så.</p>`,
-        footer: `<button class="btn" data-action="imp.tovote">Gå til afstemning</button>` });
-    },
-    vote(){
-      return ui.shell({ title: 'Imposter', color: C, backAction: 'imp.setup', body: `
-        <div class="label">Afstemning</div>
-        <h2>Hvem er imposteren?</h2>
-        <p class="muted">Tal sammen, peg, og tryk på navnet. Tryk igen for at stemme ud.</p>
-        <div class="vote-grid">${R.order.map(n => `<button class="btn ${R.pick === n ? 'danger' : 'ghost'}" data-action="imp.voteout" data-name="${esc(n)}">${R.pick === n ? 'Ud med ' + esc(n) + '?' : esc(n)}</button>`).join('')}</div>` });
-    },
-    caught(){
-      return ui.shell({ title: 'Imposter', color: C, center: true, backAction: 'imp.setup', body: `
-        <div class="big accent">${esc(R.imposter)} var imposter</div>
-        <p class="muted">Sidste chance: ${esc(R.imposter)} gætter ordet højt. Rigtigt: alle andre drikker 2 slurke. Forkert: ${esc(R.imposter)} drikker 4.</p>`,
-        footer: `<button class="btn" data-action="imp.guess" data-ok="1">Rigtigt gæt</button><button class="btn ghost" data-action="imp.guess" data-ok="0">Forkert gæt</button>` });
+        <p class="muted">Sig ét ord på skift, samme vej rundt som telefonen gik. Tag en runde eller to, peg på én, og afslør så.</p>`,
+        footer: `<button class="btn ${R.arm ? 'danger' : ''}" data-action="imp.show">${R.arm ? 'Tryk igen for at afsløre' : 'Afslør imposter'}</button>` });
     },
     end(){
-      const r = R.result;
       return ui.shell({ title: 'Imposter', color: C, center: true, backAction: 'imp.setup', body: `
-        <div class="big ${r.impWon ? '' : 'accent'}">${esc(r.title)}</div>
-        <p class="muted">${esc(r.text)}</p>
-        <div class="reveal-box same"><div class="label">Ordet var</div><div class="big">${esc(R.word)}</div>
-          <p class="muted">Imposter: <b>${esc(R.imposter)}</b></p></div>`,
+        <div class="label">Afsløring</div>
+        ${ui.avatar(R.imposter, true)}
+        <div class="big accent">${esc(R.imposter)} var imposter</div>
+        <div class="reveal-box same"><div class="label">Ordet var</div><div class="big">${esc(R.word)}</div></div>`,
         footer: `<button class="btn" data-action="imp.start">Ny runde</button><button class="btn ghost" data-action="go" data-to="players">Spillere</button>` });
     }
   };
@@ -118,12 +105,11 @@
     const word = App.pick(left);
     used.add(word);
     const order = App.fromHolder();
-    R = { phase: 'pass', idx: 0, order, word, imposter: null, starter: null, result: null, pick: null };
+    R = { phase: 'pass', idx: 0, order, word, imposter: null, starter: null, arm: 0 };
     R.imposter = App.pick(order);
     R.starter = App.pick(order.filter(n => n !== R.imposter));   // imposteren starter aldrig
     App.render();
   }
-  function finish(r){ R.result = r; R.phase = 'end'; App.render(); }
 
   /* ---------- knapper ---------- */
   App.on('imp.start', start);
@@ -144,18 +130,16 @@
     else { R.idx++; R.phase = 'pass'; }
     App.render();
   });
-  App.on('imp.tovote', () => { R.phase = 'vote'; App.render(); });
-  App.on('imp.voteout', el => {
-    const name = el.dataset.name;
-    if (R.pick !== name) { R.pick = name; App.render(); return; }   // første tryk vælger, andet tryk stemmer ud
-    if (name === R.imposter) { R.phase = 'caught'; App.vibrate([80, 60, 80]); App.audio.ding(); App.render(); }
-    else { App.vibrate(120); finish({ impWon: true, title: `${name} var ikke imposter`, text: 'Imposteren slap. Alle andre end imposteren drikker 2 slurke.' }); }
-  });
-  App.on('imp.guess', el => {
-    const ok = el.dataset.ok === '1';
-    if (ok) App.audio.ding();
-    finish(ok
-      ? { impWon: true, title: `${R.imposter} gættede ordet`, text: 'Imposteren reddede sig. Alle andre drikker 2 slurke.' }
-      : { impWon: false, title: `${R.imposter} gættede forkert`, text: `${R.imposter} drikker 4 slurke.` });
+  /* Afsløringen kræver to tryk inden for 2,5 sekunder, så et fejltryk midt i snakken ikke ødelægger runden */
+  let armTimer = null;
+  App.on('imp.show', () => {
+    if (!R || R.phase !== 'discuss') return;
+    if (!R.arm) {
+      R.arm = Date.now(); App.render();
+      clearTimeout(armTimer); armTimer = setTimeout(() => { if (R && R.phase === 'discuss') { R.arm = 0; App.render(); } }, 2500);
+      return;
+    }
+    clearTimeout(armTimer); R.arm = 0;
+    R.phase = 'end'; App.vibrate([80, 60, 80]); App.audio.ding(); App.render(true);
   });
 })();
