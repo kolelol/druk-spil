@@ -356,7 +356,7 @@
   function audioEl(){
     if (!player) {
       player = new Audio(); player.preload = 'auto';
-      try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch (e) {}
+      App.audioMode('playback');   // telefonen spiller selv: skal kunne høres på lydløs
       /* Klippet er slut: vis det på Pause-knappen, så "Hør igen" er det naturlige næste tryk */
       player.addEventListener('ended', () => { if (H && usePreview() && H.phase !== 'clip' && !H.paused) { H.paused = true; App.render(); } });
     }
@@ -1036,7 +1036,7 @@
     UI.msg = '';
     if (usePreview()) {
       const a = audioEl();
-      try { if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback'; } catch (e) {}
+      App.audioMode('playback');
       if (!H.pv) {
         H.cstate = 'loading'; paintClip();
         await prepPreview();

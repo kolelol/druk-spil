@@ -45,11 +45,22 @@ const App = (() => {
 
   /* ---------- lyd (Web Audio, ingen filer) ---------- */
   let ctx = null;
+  /* Lydkanalen på iPhone (Safari 17+): "playback" gør, at bomben kan høres på lydløs, men den tager lyden fra alle andre
+     apps, også Spotify, så snart vores lyd starter. Ejeren (2026-10-17): "når jeg åbner appen, så lukker Spotify". Bruger
+     Hitster Spotify som musik, holder vi os derfor til "ambient", som blander sig med Spotify og følger lydløs-knappen. */
+  function sessionType(){
+    const h = store.game && store.game.hitster;
+    let spotify = false;
+    try { spotify = !!localStorage.getItem('drukspil.spotify.token'); } catch (e) {}
+    return h && h.kilde === 'spotify' && spotify ? 'ambient' : 'playback';
+  }
+  function audioMode(t){
+    try { if (navigator.audioSession && navigator.audioSession.type !== t) navigator.audioSession.type = t; } catch (e) {}
+  }
   function ac(){
     if (!store.settings.sound) return null;
     try {
-      /* iPhone på lydløs: "playback" gør, at bomben stadig kan høres (Safari 17+) */
-      if (navigator.audioSession && navigator.audioSession.type !== 'playback') navigator.audioSession.type = 'playback';
+      audioMode(sessionType());
       if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
       if (ctx.state === 'suspended') ctx.resume();
       return ctx;
@@ -340,7 +351,7 @@ const App = (() => {
       if (!fn) return;
       e.preventDefault();
       pendingAnim = true;
-      try { fn(el, e); } finally { pendingAnim = false; }
+      try { fn(el, e); } finally { pendingAnim = false; if (ctx) audioMode(sessionType()); }   // trykket kan have skiftet musikkilde
     });
     root.addEventListener('change', e => {
       const el = e.target.closest('[data-change]'); if (!el) return;
@@ -374,7 +385,7 @@ const App = (() => {
     holder, setHolder, fromHolder,
     settings: () => store.settings,
     audio, vibrate, keepAwake, icons,
-    toast,
+    toast, audioMode,
     ui: { shell, toggle, seg, stepper, range, syncRange, avatar, table }
   };
 })();
