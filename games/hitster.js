@@ -86,7 +86,7 @@
       }
       if (S.kilde !== 'spotify' && S.kilde !== 'telefon') { S.kilde = 'telefon'; App.save(); }
       App.keepAwake();
-      if (S.kilde === 'spotify' && Spotify.loggedIn() && !Spotify.blocked()) { refreshDevices(true); }
+      if (S.kilde === 'spotify' && Spotify.loggedIn() && !Spotify.blocked()) { refreshDevices(true); Spotify.silence().catch(() => {}); }   // find det lydløse nummer, så første pause ikke skal vente
     },
     onLeave(){ stopTimers(); pauseQuiet(); if (player) player.pause(); UI.testing = ''; },
     render
@@ -329,12 +329,14 @@
      stoppe: ved muren i Klip over Spotify, på Pause-knappen og i testklippet. hushPreview() stopper kun telefonens eget preview. */
   let cur = null;   // det nummer, der spiller lige nu: { uri, at (Date.now ved start), offset (ms) }
   function hushPreview(){ if (player) player.pause(); }
+  /* Spotify: i stedet for pause sættes et lydløst nummer på, så Spotify-appen bliver ved med at være vågen (ejeren 2026-10-17:
+     "spil bare en helt lydløs sang, det virker"). Findes der intet lydløst nummer, pauses der som før. */
   function hush(){
     hushPreview();
     if (!played || !S || !Spotify.loggedIn()) return;
     played = false;
     if (cur) cur.paused = Date.now();
-    Spotify.pause(dev()).catch(() => {});
+    Spotify.silence().then(uri => uri ? Spotify.play(uri, dev()) : Spotify.pause(dev())).catch(() => {});
   }
   /* Telefonen spiller selv: 30 sekunders klip fra Deezer, der starter i omkvædet. Først kun i Klip (ejeren 2026-10-17:
      "i stedet for at sangen starter fra start og det lange omkvæd kommer"), samme aften standard i alle spiltyper, fordi

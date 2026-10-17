@@ -121,9 +121,28 @@ const Spotify = (() => {
   const play = (uri, deviceId, positionMs) => api('PUT', '/me/player/play' + dev(deviceId), { uris: [uri], position_ms: Math.max(0, Math.floor(positionMs || 0)) });
   const pause = deviceId => api('PUT', '/me/player/pause' + dev(deviceId));
   const resume = deviceId => api('PUT', '/me/player/play' + dev(deviceId));   // uden nummer: fortsætter, hvor pausen var
-  /* Spotify har ingen måde at holde en pauset iPhone-app vågen på (den forsvinder fra Connect efter få minutter), og et
-     stille nummer vil ejeren ikke have i sin Spotify. Derfor pauser Hitster aldrig midt i et spil: sangen kører videre,
-     til den næste afløser den. */
+  /* Et stille nummer, sat på i stedet for pause: en pauset Spotify-app på iPhone bliver lukket ned af systemet efter få
+     minutter, og så kan appen ikke styre den igen, før man selv trykker play i Spotify. Et nummer uden lyd holder appen
+     i gang. Ejeren bad om det tilbage 2026-10-17 ("det virker"), efter at en rigtig pause gav det gamle problem igen. */
+  const SILENCE_KEY = 'drukspil.spotify.silence';
+  let silencing = null;
+  function silence(){
+    const c = get(SILENCE_KEY);
+    if (c && c.uri) return Promise.resolve(c.uri);
+    if (c && c.none && Date.now() - c.none < 86400000) return Promise.resolve(null);
+    if (silencing) return silencing;
+    silencing = (async () => {
+      const queries = ['A a a a a Very Good Song Samir Mesrahi', '10 minutes of silence', 'silence 10 minutes', 'silent track'];
+      for (const q of queries) {
+        const items = await search(q).catch(() => []);
+        const hit = items.find(it => /very good song|silen/i.test(it.name) && it.duration_ms >= 240000);
+        if (hit) { put(SILENCE_KEY, { uri: hit.uri, name: hit.name }); return hit.uri; }
+      }
+      put(SILENCE_KEY, { none: Date.now() });
+      return null;
+    })().finally(() => { silencing = null; });
+    return silencing;
+  }
 
   /* ---------- find nummeret på Spotify ---------- */
   /* æ og ø har ingen accent at fjerne, så de oversættes, ellers bliver "Øde ø" til "de" */
@@ -187,5 +206,5 @@ const Spotify = (() => {
     return (e && e.message) || 'Noget gik galt med Spotify.';
   }
 
-  return { SpotifyError, blocked, redirectUri, login, hasCallback, callback, loggedIn, logout, devices, play, pause, resume, findTrack, explain };
+  return { SpotifyError, blocked, redirectUri, login, hasCallback, callback, loggedIn, logout, devices, play, pause, resume, silence, findTrack, explain };
 })();
