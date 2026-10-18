@@ -910,7 +910,7 @@
   function noteHtml(){
     const name = who();
     if (H.wrong.length) return `<div class="cnote cwrong">${H.wrong.map(t => `<span>${esc(t)}</span>`).join('')}</div>`;
-    return `<p class="cnote muted">${H.solo ? 'Hør så lidt, du tør. I alt: ' + fmtSec(H.score[name]) + '.' : 'Kun ' + esc(name) + ' gætter. Resten holder kæft.'}</p>`;
+    return `<p class="cnote muted">${H.solo ? 'Hør så lidt, du tør. I alt: ' + fmtSec(H.score[name]) + '.' : 'Kun ' + esc(name) + ' gætter. De andre er stille.'}</p>`;
   }
   function renderClip(){
     const name = who(), st = H.stage, wall = WALLS[st];
