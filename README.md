@@ -12,13 +12,13 @@ Ren HTML/CSS/JS uden build-trin. Virker som installeret app (PWA) og uden net, n
 
 | **Hitster** | Telefonen spiller 30 sekunders klip fra omkvædet (Deezers previews), og I gætter dem. Ingen login og intet at sætte op. Vil I høre hele sangen, vælger I Spotify under Musik fra (kræver Premium og en vågen Spotify-app). Fire spiltyper: *Streams* (højere eller lavere: har den nye sang flere eller færre streams på Spotify end den forrige? Rigtigt giver et point, forkert koster slurke. Som i de kendte Higher or Lower-spil er næste sang tilfældig, flere eller færre er altid 50/50, og det bliver sværere, jo længere man når: de første sange ligger langt fra hinanden på listen, og så rykker de tættere og tættere på. Let, Mellem og Svær bestemmer, hvor tæt de ender, og hvor hurtigt det går. Der kan sættes 5 eller 10 sekunder til at svare. Virker også uden Spotify, bare uden musik), *Klassisk* (sæt nummeret på rette plads i din tidslinje af årstal. Rigtigt: du beholder kortet. Forkert: du drikker, og kortet er væk. Først til målet vinder. Valgfri tid til at placere og bonus for kunstner og titel), *Kasser* (én gætter titel, kunstner og årstal, mens den næste spiller holder telefonen, ser svarene og sætter kryds. Hvert kryds er et point. Valgfri tid til at gætte) og *Klip* (som Songless og Songspot: hver spiller får sin egen sang og hører først 0,1 sekund, enten fra omkvædet (et 30 sekunders preview fra Deezer, som telefonen selv spiller, så det virker uden Spotify) eller fra starten over Spotify. Gæt ved at søge efter titlen. Skip eller et forkert gæt rykker muren ét led op i kæden (1, 5, 10, 15 og 30 sekunder), og sangen kører videre, hvor den var. Din tid er, hvor langt muren stod, da du gættede. Får du den ikke, tæller den 40 sekunder, og du drikker. Laveste samlede tid vinder. Fem sværhedsgrader efter, hvor kendt sangen er: Let, Mellem, Svær, Ekspert og Umulig). I Kasser og Streams drikker den med færrest point til sidst, i Klip den med den længste tid. **Streams og Klip kan spilles alene** (vælg Alene under spiltypen): i Streams spiller du, til du svarer forkert, og rekorden er din længste streak; i Klip får du 10 sange, og rekorden er din korteste samlede tid. Hver kombination af sværhed, musik og år har sin egen rekord, og appen siger til, når du slår den. Sværheden kan skiftes inde i spillet (alene starter det en ny runde, sammen gælder det fra næste sang), og en sang, der har været spillet, kommer ikke igen, før appen har været lukket helt. Kan begrænses til numre fra 1980, 1990 eller 2000 og frem, og musikken vælges som "Alt", "Kun dansk" eller "Uden dansk" (366 internationale og 672 danske numre; "Alt" blander lige mange af hver, fra Gasolin' og Bamses Venner til Gilli og D1MA). Streams har tal for 364 internationale og 366 danske numre og kan også spilles som Kun dansk. Med Spotify kører musikken videre, mens I svarer og giver telefonen videre, så Spotify ikke falder i søvn mellem sangene (se nedenfor). |
 
-| **Spygame** | Alle får det samme ord i en kategori, spionen får kun kategorien. Stil spørgsmål til hinanden rundt om bordet på én skærm, svar uden at sige ordet, og stem på, hvem spionen er (to tryk på navnet). Spionen kan se alle ordene i kategorien, og bliver spionen taget, får spionen ét gæt på ordet. Antal spioner og kategorier ligger under Indstillinger. Knap 500 ord, kun rigtige og velkendte navne og ting. |
+| **Imposter** | Alle får det samme ord i en kategori, imposteren får kun kategorien. Stil spørgsmål til hinanden rundt om bordet på én skærm, svar uden at sige ordet, og stem på, hvem imposteren er (to tryk på navnet). Imposteren kan se alle ordene i kategorien, og bliver imposteren taget, får imposteren ét gæt på ordet. Er I flere impostere, står de andres navne på hver imposters kort, så de kan spille sammen. Antal impostere og kategorier ligger under Indstillinger. Knap 500 ord, kun rigtige og velkendte navne og ting. Spillet hed Spygame indtil 2026-10-25, og koden bruger stadig det navn (`games/spygame.js`, `data/spygame-words.js`). |
 
-Midt i en runde kræver tilbage-pilen i Spygame to tryk ("Tryk igen for at afbryde runden"), og "Fjern alle" på spillerskærmen kræver også to tryk. Begge dele er der, fordi testpersonerne ellers mistede hele runden på ét fejltryk.
+Midt i en runde kræver tilbage-pilen i Imposter to tryk ("Tryk igen for at afbryde runden"), og "Fjern alle" på spillerskærmen kræver også to tryk. Begge dele er der, fordi testpersonerne ellers mistede hele runden på ét fejltryk.
 
-**Bordplan:** under Spillere (og i Spygame) kan I sætte pladserne: tryk på navnene i den rækkefølge, I sidder rundt om bordet. Telefonen går så rundt i den rækkefølge i Spygame og Hitster, i stedet for hen over bordet. Næste runde starter hos den, der har telefonen, og har en anden den, trykker man bare på dem på bordet.
+**Bordplan:** under Spillere (og i Imposter) kan I sætte pladserne: tryk på navnene i den rækkefølge, I sidder rundt om bordet. Telefonen går så rundt i den rækkefølge i Imposter og Hitster, i stedet for hen over bordet. Næste runde starter hos den, der har telefonen, og har en anden den, trykker man bare på dem på bordet.
 
-"Frækt indhold" på forsiden slår voksenkategorier til i Spygame. Bombe har ingen.
+"Frækt indhold" på forsiden slår voksenkategorier til i Imposter. Bombe har ingen.
 
 ## Hitster og Spotify
 
@@ -59,10 +59,10 @@ fonts/                     Lilita One (SIL Open Font License), så skriften ogs�
 app.js                     kerne: navigation, spillere, indstillinger, lyd (Web Audio), vibration, wake lock, ikoner
 spotify.js                 Spotify-klient til Hitster: login (PKCE), enheder, afspil/pause, find nummer
 games/bombe.js             Bombe
-games/spygame.js           Spygame
+games/spygame.js           Imposter (hed Spygame før)
 games/hitster.js           Hitster
 data/bombe-categories.js   kategorier
-data/spygame-words.js      ord pr. kategori til Spygame
+data/spygame-words.js      ord pr. kategori til Imposter
 data/hitster-songs.js      numre: ['Titel', 'Kunstner', år], dansk musik i en separat liste
 data/hitster-streams.js    antal streams i millioner pr. nummer (laves af tools/update-streams.js)
 tools/update-streams.js    henter friske tal fra kworb.net: node tools/update-streams.js
@@ -76,10 +76,10 @@ Hvert spil registrerer sig med `App.register({ id, navn, kort, farve, ikon, rend
 
 ## Tilføj indhold
 
-Ejeren har bedt om, at der ikke bliver tilføjet ord til Spygame og Bombe, kun fjernet. Opfundne ting, citater og ting, en udenforstående tror, unge synes er sjove, er netop det, der er blevet kaldt "cringe". Er man i tvivl om et ord, skal det ud.
+Ejeren har bedt om, at der ikke bliver tilføjet ord til Imposter og Bombe, kun fjernet. Opfundne ting, citater og ting, en udenforstående tror, unge synes er sjove, er netop det, der er blevet kaldt "cringe". Er man i tvivl om et ord, skal det ud.
 
 - **Nye Bombe-kategorier:** læg dem i det rigtige tema i `BOMBE_CATEGORIES` i `data/bombe-categories.js`. Tag dem fra kendte kategorispil (Scattergories, 5 Second Rule, Tick Tack Bumm) i stedet for at opfinde dem: ejeren vil have lister, der beviseligt virker. Spillet skifter tema hver gang, så temaerne skal være forskellige i slags.
-- **Nye Spygame-ord:** i den rigtige kategori i `data/spygame-words.js`. Kategorien alene må ikke hjælpe spionen, så hold kategorierne brede.
+- **Nye Imposter-ord:** i den rigtige kategori i `data/spygame-words.js`. Kategorien alene må ikke hjælpe imposteren, så hold kategorierne brede.
 - **Nye Hitster-numre:** tilføj `['Titel', 'Kunstner', år]` i `data/hitster-songs.js` (`HITSTER_SONGS_DK` til dansk). Året er det år, nummeret først udkom. Slå det op, og stol ikke på én kilde: streamingtjenester viser ofte genudgivelsens år. Den danske liste er lavet ved kun at tage numre, hvor to kilder (MusicBrainz, Deezer, iTunes) var enige. Stav titel og kunstner som på Spotify, for appen finder nummeret ved at søge på dem. Numre, Spotify ikke har, springes over under spillet; se konsollen for "ingen match".
 - **Streams-tal:** Spotify udleverer ikke antal streams, så tallene er et øjebliksbillede fra kworb.net: først den globale topliste, derefter kunstnerens egen side for resten. Kør `node tools/update-streams.js` (et par minutter) for at hente friske tal, også efter du har tilføjet nye numre. Kunstnere, kworb ikke har en side for, får ingen tal og er ikke med i spiltypen Streams. Kunstnernes Spotify-ID gemmes i `tools/artist-ids.json`.
 

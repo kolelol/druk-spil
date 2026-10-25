@@ -1,7 +1,7 @@
 {
   "name": "Drukspil",
   "short_name": "Drukspil",
-  "description": "Gratis drukspil til telefonen: Bombe, Hitster og Spygame.",
+  "description": "Gratis drukspil til telefonen: Bombe, Hitster og Imposter.",
   "lang": "da",
   "start_url": "./index.html",
   "scope": "./",

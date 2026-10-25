@@ -199,11 +199,11 @@ input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 
 .timer { font: 400 64px/1 var(--display); font-variant-numeric: tabular-nums; text-shadow: var(--o-l); margin-top: 6px; letter-spacing: 1px; }
 .timer.done { color: #ff8a7a; }
 
-/* Kort af pap: rollen i Spygame og kortene i kortspillene */
+/* Kort af pap: rollen i Imposter og kortene i kortspillene */
 .reveal-box, .deck-card { position: relative; width: 100%; margin-top: 16px; padding: 34px 22px 28px; border-radius: 22px; border: 3px solid var(--ink); background: linear-gradient(#fffaf0, #f4e4c1); color: var(--cream-ink); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; box-shadow: inset 0 0 0 6px var(--accent), inset 0 0 0 8px rgba(13, 27, 62, .5), 0 6px 0 var(--ink), 0 16px 26px rgba(0, 0, 0, .4); }
 .deck-card { min-height: 46dvh; margin-bottom: 24px; box-shadow: inset 0 0 0 6px var(--accent), inset 0 0 0 8px rgba(13, 27, 62, .5), 0 6px 0 var(--ink), 0 12px 0 -3px #ead7ab, 0 15px 0 -3px var(--ink), 0 21px 0 -8px #dcc596, 0 24px 0 -8px var(--ink), 0 26px 26px rgba(0, 0, 0, .4); }
 .reveal-box .label, .deck-card .label { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); max-width: 92%; padding: 7px 14px 6px; border-radius: 9px; border: 2px solid var(--ink); background: linear-gradient(color-mix(in srgb, var(--accent), #fff 25%), var(--accent)); color: #fff; font-size: 12.5px; letter-spacing: .08em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: inset 0 2px 0 rgba(255, 255, 255, .4), 0 3px 0 var(--ink); }
-.reveal-box.same { min-height: 250px; }   /* rollekort: samme højde, uanset tekst, så ingen kan se forskel på afstand */
+.reveal-box.same { min-height: 330px; }   /* rollekort: samme højde, uanset tekst, så ingen kan se forskel på afstand. Målt 2026-10-25: det højeste kort (imposter med tre andre impostere, 320 px bred skærm) er 316 px */
 .reveal-box .big, .deck-card .big { color: var(--cream-ink); text-shadow: 0 1px 0 #fff; }
 .deck-card .big { font-size: clamp(28px, 8vw, 44px); line-height: 1.12; }
 .reveal-box .big.accent { color: var(--accent); }
@@ -268,7 +268,7 @@ input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 
 @keyframes slam { from { transform: scale(4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 @keyframes fadeUp { from { transform: translateY(18px); opacity: 0; } to { transform: none; opacity: 1; } }
 
-/* Spygame: ordlisten kan foldes ud på spørgeskærmen */
+/* Imposter: ordlisten kan foldes ud på spørgeskærmen */
 .wordlist { width: 100%; margin-top: 4px; }
 .wordlist summary { cursor: pointer; font: 400 15px/1.2 var(--display); letter-spacing: .3px; color: var(--gold); text-shadow: var(--o-xs); padding: 8px 0; }
 .wordlist .chips { justify-content: center; gap: 6px; margin-top: 6px; }

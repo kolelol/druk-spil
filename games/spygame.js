@@ -1,4 +1,6 @@
-/* Spygame: alle får det samme ord i en kategori, undtagen spionen, der kun kender kategorien.
+/* Imposter (hed Spygame indtil 2026-10-25; filen, id'et 'spygame', SPYGAME_WORDS og spy.*-handlerne har beholdt navnet,
+   så gemte indstillinger overlever): alle får det samme ord i en kategori, undtagen imposteren, der kun kender kategorien.
+   Er der flere impostere, ser hver af dem på sit kort, hvem de andre er.
    Telefonen går rundt om bordet, så stiller man spørgsmål til hinanden på skift, og til sidst stemmer man.
    Så få tryk som muligt: spørgsmålene foregår på én skærm (ingen "næste spørgsmål" pr. person), og indstillingerne
    ligger foldet sammen, så man bare trykker start. */
@@ -23,8 +25,8 @@
   </svg>`;
 
   App.register({
-    id: ID, navn: 'Spygame', farve: C, ikon: IKON,
-    kort: 'Alle får det samme ord, spionen får kun kategorien. Stil spørgsmål rundt om bordet, og find spionen.',
+    id: ID, navn: 'Imposter', farve: C, ikon: IKON,
+    kort: 'Alle får det samme ord, imposteren får kun kategorien. Stil spørgsmål rundt om bordet, og find imposteren.',
     onEnter(){ S = App.gameSettings(ID, DEF); if ('rounds' in S) { delete S.rounds; App.save(); } R = null; App.keepAwake(); },
     render
   });
@@ -34,6 +36,8 @@
   function maxSpies(n){ return Math.max(1, Math.floor((n - 1) / 2)); }
   function spiesLeft(){ return [...R.spies].filter(n => R.alive.has(n)).length; }
   function othersLeft(){ return [...R.alive].filter(n => !R.spies.has(n)).length; }
+  /* "Bo", "Bo og Clement", "Anders, Bo og Clement" */
+  function og(names){ return names.length > 1 ? names.slice(0, -1).join(', ') + ' og ' + names[names.length - 1] : names.join(''); }
 
   function render(){
     if (!R) return renderSetup();
@@ -55,15 +59,16 @@
       </div>
       <div class="card">
         <div class="label">Sådan spiller I</div>
-        <p>Alle får det samme ord. Spionen får kun kategorien. Stil et spørgsmål til en anden rundt om bordet, og svar, så det passer til ordet, men uden at gøre det for let for spionen. Så stemmer I. Rammer I spionen, må spionen gætte ordet: rigtigt, og alle andre drikker 2. Forkert, og spionen drikker 4. Rammer I forkert, drikker den, I ramte, 2 og er ude, og I spørger videre.</p>
+        <p>Alle får det samme ord. Imposteren får kun kategorien. Stil et spørgsmål til en anden rundt om bordet, og svar, så det passer til ordet, men uden at gøre det for let for imposteren. Så stemmer I. Rammer I imposteren, må imposteren gætte ordet: rigtigt, og alle andre drikker 2. Forkert, og imposteren drikker 4. Rammer I forkert, drikker den, I ramte, 2 og er ude, og I spørger videre.</p>
+        <p>Er I flere impostere, kan de se hinanden på deres kort.</p>
       </div>
       <details class="card how">
-        <summary>Indstillinger: ${S.spies} spion${S.spies > 1 ? 'er' : ''}, ${off ? (allCats().length - off) + ' kategorier' : 'alle kategorier'}</summary>
-        ${ui.stepper('Antal spioner', 'spy.step', S.spies, 'spies', n >= 3 ? 'Højst ' + maxS + ' med ' + n + ' spillere' : '')}
+        <summary>Indstillinger: ${S.spies} imposter${S.spies > 1 ? 'e' : ''}, ${off ? (allCats().length - off) + ' kategorier' : 'alle kategorier'}</summary>
+        ${ui.stepper('Antal impostere', 'spy.step', S.spies, 'spies', n >= 3 ? 'Højst ' + maxS + ' med ' + n + ' spillere' : '')}
         <div class="chips" style="margin-top:8px">${allCats().map(c => `<button class="chip ${S.cats[c.id] === false ? '' : 'on'}" data-action="spy.cat" data-id="${c.id}">${esc(c.navn)}</button>`).join('')}</div>
         ${enabledCats().length ? '' : '<p class="warn">Vælg mindst én kategori.</p>'}
       </details>`;
-    return ui.shell({ title: 'Spygame', color: C, body, footer: `<button class="btn" data-action="spy.start" ${ok ? '' : 'disabled'}>Start runde</button>` });
+    return ui.shell({ title: 'Imposter', color: C, body, footer: `<button class="btn" data-action="spy.start" ${ok ? '' : 'disabled'}>Start runde</button>` });
   }
 
   const wordList = () => `<details class="wordlist"><summary>Se alle ord i ${esc(R.cat)}</summary><div class="chips">${R.words.map(w => `<span class="chip">${esc(w)}</span>`).join('')}</div></details>`;
@@ -72,7 +77,7 @@
     pass(){
       const name = R.order[R.idx];
       const first = R.idx === 0;
-      return ui.shell({ title: 'Spygame', color: C, center: true, backAction: 'spy.setup', body: `
+      return ui.shell({ title: 'Imposter', color: C, center: true, backAction: 'spy.setup', body: `
         <div class="label">Spiller ${R.idx + 1} af ${R.order.length}</div>
         <p class="muted">${first ? 'Telefonen starter hos' : 'Giv telefonen videre til'}</p>
         <div class="big">${esc(name)}</div>
@@ -83,22 +88,27 @@
     reveal(){
       const name = R.order[R.idx];
       const isSpy = R.spies.has(name);
+      /* Er der flere impostere, ser hver af dem de andres navne (ejeren 2026-10-25). Teksten er kortere, så kortet ikke bliver højere end et ordkort. */
+      const mates = R.order.filter(n => n !== name && R.spies.has(n));
+      const spyText = mates.length
+        ? `<p class="muted">${mates.length > 1 ? 'De andre impostere er' : 'Den anden imposter er'} <b>${esc(og(mates))}</b>. Spil med, som om I kender ordet.</p>`
+        :'<p class="muted">Du kender ikke ordet. Spørg og svar, som om du gør. Når alle har set deres rolle, kan du se ordlisten.</p>';
       /* Begge kort har samme opbygning, så ingen kan se forskel på afstand */
       const inner = isSpy
-        ? `<div class="reveal-box same"><div class="label">${esc(name)}</div><div class="big">Du er spionen</div>
+        ? `<div class="reveal-box same"><div class="label">${esc(name)}</div><div class="big">Du er imposter</div>
             <p class="muted">Kategori: <b>${esc(R.cat)}</b></p>
-            <p class="muted">Du kender ikke ordet. Spørg og svar, som om du gør. Når alle har set deres rolle, kan du se ordlisten.</p></div>`
+            ${spyText}</div>`
         : `<div class="reveal-box same"><div class="label">${esc(name)}</div><div class="big">${esc(R.word)}</div>
             <p class="muted">Kategori: <b>${esc(R.cat)}</b></p>
             <p class="muted">Hold det for dig selv. Svar, så det passer, men ikke for tydeligt.</p></div>`;
       const last = R.idx === R.order.length - 1;
-      return ui.shell({ title: 'Spygame', color: C, center: true, backAction: 'spy.setup', body: inner,
+      return ui.shell({ title: 'Imposter', color: C, center: true, backAction: 'spy.setup', body: inner,
         footer: `<button class="btn" data-action="spy.hide">${last ? 'Skjul. Alle har set' : 'Skjul og giv videre'}</button>` });
     },
     /* Spørgsmålene: én skærm. Starteren spørger en anden, den svarer og spørger videre, rundt om bordet. */
     ask(){
       const alive = R.order.filter(n => R.alive.has(n));
-      return ui.shell({ title: 'Spygame', color: C, center: true, backAction: 'spy.setup', body: `
+      return ui.shell({ title: 'Imposter', color: C, center: true, backAction: 'spy.setup', body: `
         <div class="label">${R.round > 1 ? 'Runde ' + R.round + '. ' + alive.length + ' tilbage' : 'Kategori: ' + esc(R.cat)}</div>
         <div class="big">${esc(R.starter)} starter</div>
         ${ui.table(R.order, { sm: true, start: R.starter, cur: R.starter, done: R.order.filter(x => !R.alive.has(x)) })}
@@ -108,16 +118,16 @@
     },
     vote(){
       const alive = R.order.filter(n => R.alive.has(n));
-      return ui.shell({ title: 'Spygame', color: C, backAction: 'spy.setup', body: `
+      return ui.shell({ title: 'Imposter', color: C, backAction: 'spy.setup', body: `
         <div class="label">Afstemning</div>
-        <h2>Hvem er spionen?</h2>
+        <h2>Hvem er imposter?</h2>
         <p class="muted">Tal sammen, bliv enige, og tryk på navnet. Tryk igen for at stemme ud.</p>
         <div class="vote-grid">${alive.map(n => `<button class="btn ${R.pick === n ? 'danger' : 'ghost'}" data-action="spy.voteout" data-name="${esc(n)}">${R.pick === n ? 'Ud med ' + esc(n) + '?' : esc(n)}</button>`).join('')}</div>` });
     },
-    /* Spionen er taget: ét gæt på ordet. Spionen kan se ordlisten, så det er et reelt gæt. */
+    /* Imposteren er taget: ét gæt på ordet. Imposteren kan se ordlisten, så det er et reelt gæt. */
     caught(){
-      return ui.shell({ title: 'Spygame', color: C, center: true, backAction: 'spy.setup', body: `
-        <div class="big">${esc(R.caughtName)} var spionen</div>
+      return ui.shell({ title: 'Imposter', color: C, center: true, backAction: 'spy.setup', body: `
+        <div class="big">${esc(R.caughtName)} var imposter</div>
         <p class="muted">Sidste chance: ${esc(R.caughtName)} gætter ordet højt. Rigtigt: alle andre drikker 2. Forkert: ${esc(R.caughtName)} drikker 4.</p>
         ${wordList()}`,
         footer: `<button class="btn" data-action="spy.guess" data-ok="1">Rigtigt gæt</button><button class="btn ghost" data-action="spy.guess" data-ok="0">Forkert gæt</button>` });
@@ -125,18 +135,18 @@
     result(){
       const r = R.result;
       if (!r.over) {
-        return ui.shell({ title: 'Spygame', color: C, center: true, backAction: 'spy.setup', body: `
-          <div class="big">${esc(r.name)} var ikke spionen</div>
-          <p class="muted">${esc(r.name)} drikker 2 slurke og er ude. ${spiesLeft() > 1 ? "Spionerne er" : "Spionen er"} stadig iblandt jer, så spørg videre.</p>`,
+        return ui.shell({ title: 'Imposter', color: C, center: true, backAction: 'spy.setup', body: `
+          <div class="big">${esc(r.name)} var ikke imposter</div>
+          <p class="muted">${esc(r.name)} drikker 2 slurke og er ude. ${spiesLeft() > 1 ? 'Imposterne er' : 'Imposteren er'} stadig iblandt jer, så spørg videre.</p>`,
           footer: `<button class="btn" data-action="spy.again">Spørg videre</button><button class="link" data-action="spy.tovote">Direkte til afstemning</button>` });
       }
-      const spies = [...R.spies];
-      return ui.shell({ title: 'Spygame', color: C, center: true, backAction: 'spy.setup', body: `
+      const spies = R.order.filter(n => R.spies.has(n));
+      return ui.shell({ title: 'Imposter', color: C, center: true, backAction: 'spy.setup', body: `
         <div class="big ${r.caught ? 'accent' : ''}">${esc(r.title)}</div>
         <p class="muted">${esc(r.text)}</p>
         <div class="reveal-box"><div class="label">Ordet var</div><div class="big">${esc(R.word)}</div>
           <p class="muted">Kategori: <b>${esc(R.cat)}</b></p>
-          <p class="muted">Spion${spies.length > 1 ? 'er' : ''}: <b>${esc(spies.join(', '))}</b></p></div>`,
+          <p class="muted">Imposter${spies.length > 1 ? 'e' : ''}: <b>${esc(og(spies))}</b></p></div>`,
         footer: `<button class="btn" data-action="spy.start">Ny runde</button><button class="btn ghost" data-action="spy.setup">Indstillinger</button>` });
     }
   };
@@ -182,10 +192,11 @@
   });
   App.on('spy.guess', el => {
     if (!R || R.phase !== 'caught') return;
-    const ok = el.dataset.ok === '1', name = R.caughtName, sl = spiesLeft();
-    const rest = sl > 0 ? ` Der er stadig ${sl} spion iblandt jer, der slap.` : '';
+    const ok = el.dataset.ok === '1', name = R.caughtName;
+    const rem = R.order.filter(n => R.spies.has(n) && R.alive.has(n));
+    const rest = rem.length ?` ${og(rem)} var også imposter${rem.length > 1 ? 'e' : ''} og slap væk.` : '';
     R.result = ok
-      ? { over: true, caught: false, title: `${name} gættede ordet`, text: `Spionen reddede sig. Alle andre drikker 2 slurke.${rest}` }
+      ? { over: true, caught: false, title: `${name} gættede ordet`, text: `Imposteren reddede sig. Alle andre drikker 2 slurke.${rest}` }
       : { over: true, caught: true, title: `${name} gættede forkert`, text: `${name} drikker 4 slurke.${rest}` };
     R.phase = 'result';
     if (ok) App.audio.ding();
@@ -213,7 +224,7 @@
     const sl = spiesLeft(), ol = othersLeft();
     let r;
     if (caught) { R.caughtName = name; R.phase = 'caught'; App.vibrate([80, 60, 80]); App.audio.ding(); App.render(); return; }
-    else if (sl >= ol) r = { over: true, caught, title: `${name} var ikke spionen`, text: sl > 1 ? 'Spionerne er nu lige så mange som jer andre, så de har vundet. Alle andre end spionerne drikker 4 slurke.' : 'Spionen er nu lige så mange som jer andre, så spionen har vundet. Alle andre end spionen drikker 4 slurke.' };
+    else if (sl >= ol) r = { over: true, caught, title: `${name} var ikke imposter`, text: sl > 1 ? 'Imposterne er nu lige så mange som jer andre, så de har vundet. Alle andre end imposterne drikker 4 slurke.' : 'Nu er der kun én tilbage ud over imposteren, så imposteren har vundet. Alle andre end imposteren drikker 4 slurke.' };
     else r = { over: false, name };
     R.result = r;
     R.phase = 'result';
