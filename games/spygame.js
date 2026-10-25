@@ -114,7 +114,7 @@
         <p class="muted">Tal sammen, bliv enige, og tryk på navnet. Tryk igen for at stemme ud.</p>
         <div class="vote-grid">${alive.map(n => `<button class="btn ${R.pick === n ? 'danger' : 'ghost'}" data-action="spy.voteout" data-name="${esc(n)}">${R.pick === n ? 'Ud med ' + esc(n) + '?' : esc(n)}</button>`).join('')}</div>` });
     },
-    /* Spionen er taget: ét gæt på ordet, ligesom i Imposter. Spionen kan se ordlisten, så det er et reelt gæt. */
+    /* Spionen er taget: ét gæt på ordet. Spionen kan se ordlisten, så det er et reelt gæt. */
     caught(){
       return ui.shell({ title: 'Spygame', color: C, center: true, backAction: 'spy.setup', body: `
         <div class="big">${esc(R.caughtName)} var spionen</div>

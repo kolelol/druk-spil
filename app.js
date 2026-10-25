@@ -255,7 +255,7 @@ const App = (() => {
         <input id="player-input" maxlength="16" placeholder="${store.players.length ? 'Nr. ' + (store.players.length + 1) + ' ved bordet' : 'Den, der har telefonen'}" autocomplete="off" autocapitalize="words" enterkeyhint="done">
         <button class="btn sm" type="submit">Tilføj</button>
       </form>
-      <div class="players">${list || '<p class="muted">Ingen spillere endnu. Imposter kræver mindst 3.</p>'}</div>
+      <div class="players">${list || '<p class="muted">Ingen spillere endnu.</p>'}</div>
       ${store.players.length >= 3 ? `<div class="card"><div class="label">Bordplan</div>
         <p>Telefonen går rundt om bordet i den her rækkefølge. Sid I anderledes, så sæt pladserne.</p>
         ${table(store.players, { sm: true })}

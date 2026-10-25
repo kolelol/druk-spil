@@ -8,14 +8,14 @@ const path = require('path');
 const acorn = require('internal/deps/acorn/acorn/dist/acorn');
 const walk = require('internal/deps/acorn/acorn-walk/dist/walk');
 
-const FILES = process.env.AUDIT_FILES ? process.env.AUDIT_FILES.split(',') : ['app.js', 'spotify.js', 'games/imposter.js', 'games/bombe.js', 'games/spygame.js', 'games/hitster.js'];
+const FILES = process.env.AUDIT_FILES ? process.env.AUDIT_FILES.split(',') : ['app.js', 'spotify.js', 'games/bombe.js', 'games/spygame.js', 'games/hitster.js'];
 const GLOBALS = new Set(('Object Array String Number Boolean Math JSON Date Promise Map Set WeakMap Symbol Error TypeError RegExp parseInt parseFloat isNaN isFinite ' +
   'undefined NaN Infinity console window document navigator localStorage sessionStorage location history performance fetch URL URLSearchParams ' +
   'setTimeout clearTimeout setInterval clearInterval requestAnimationFrame cancelAnimationFrame AbortController Audio AudioContext webkitAudioContext ' +
   'Uint8Array Uint32Array Float32Array ArrayBuffer DataView btoa atob encodeURIComponent decodeURIComponent TextEncoder crypto Event CustomEvent ' +
   'Intl alert arguments require module exports process HTMLElement Element Node screen self top globalThis queueMicrotask structuredClone ' +
   // data- og app-globaler, der er defineret i andre filer
-  'App Spotify HITSTER_SONGS HITSTER_SONGS_DK HITSTER_STREAMS IMPOSTER_WORDS SPYGAME_WORDS BOMBE_CATEGORIES BOMBE_CATEGORIES_ADULT').split(/\s+/));
+  'App Spotify HITSTER_SONGS HITSTER_SONGS_DK HITSTER_STREAMS SPYGAME_WORDS BOMBE_CATEGORIES BOMBE_CATEGORIES_ADULT').split(/\s+/));
 
 const declared = new Map();   // navn -> [filer]
 const used = new Map();       // navn -> antal
